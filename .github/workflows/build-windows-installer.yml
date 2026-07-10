@@ -1,0 +1,38 @@
+name: build-windows-installer
+
+# Builds the Windows offline installer (iGemini-Setup-x64-vX.Y.Z.exe) on a clean
+# windows-latest runner, then uploads it as a workflow artifact.
+#
+# No secrets are used: the installer embeds no API keys — keys are supplied by
+# the end user at runtime (read from %USERPROFILE%\.config). The whole stack is
+# fetched from official sources (nodejs.org, python.org, nuget.org, npm, and the
+# pinned claudecodeui upstream commit) and bundled into one offline setup.exe.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build offline installer
+        shell: pwsh
+        run: |
+          .\scripts\windows\installer\build-installer.ps1 -PyIndex 'https://pypi.org/simple'
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: iGemini-Setup-x64
+          path: scripts/windows/installer/Output/iGemini-Setup-x64-v*.exe
+          if-no-files-found: error

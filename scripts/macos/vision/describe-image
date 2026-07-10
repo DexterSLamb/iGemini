@@ -1,0 +1,27 @@
+#!/bin/bash
+# describe-image <图片> [提示词] — 用 Qwen3-VL（阿里 DashScope/百炼）看图 + OCR。
+# key 与 base URL 读自 ~/.config/qwen/{key,base}（绝不入库）。部署为全局命令：cp 到 /usr/local/bin/describe-image。
+# 默认模型 qwen3-vl-plus（通用最强，OCR+理解通吃）；纯 OCR 重场景可 DESCRIBE_MODEL=qwen3.5-ocr。
+set -e
+IMG="$1"; [ -f "$IMG" ] || { echo "用法: describe-image <图片> [提示词]"; exit 1; }
+PROMPT="${2:-请详细描述这张图片的内容；若含文字或表格，请逐字逐项准确读出。}"
+MODEL="${DESCRIBE_MODEL:-qwen3-vl-plus}"
+python3 - "$IMG" "$PROMPT" "$MODEL" <<'PY'
+import sys,json,base64,os,urllib.request,urllib.error,mimetypes
+img,prompt,model=sys.argv[1],sys.argv[2],sys.argv[3]
+cfg=os.path.expanduser("~/.config/qwen")
+key=open(cfg+"/key").read().strip()
+base=open(cfg+"/base").read().strip() if os.path.exists(cfg+"/base") else "https://dashscope.aliyuncs.com/compatible-mode/v1"
+mt=mimetypes.guess_type(img)[0] or "image/png"
+b64=base64.b64encode(open(img,'rb').read()).decode()
+body=json.dumps({"model":model,"max_tokens":2000,"messages":[{"role":"user","content":[
+   {"type":"text","text":prompt},
+   {"type":"image_url","image_url":{"url":"data:%s;base64,%s"%(mt,b64)}}]}]}).encode()
+req=urllib.request.Request(base+"/chat/completions",data=body,
+   headers={"Authorization":"Bearer "+key,"Content-Type":"application/json"})
+try:
+    d=json.load(urllib.request.urlopen(req,timeout=120))
+    print(d["choices"][0]["message"]["content"])
+except urllib.error.HTTPError as e:
+    sys.stderr.write("API 错误 %d: %s\n"%(e.code,e.read().decode()[:400])); sys.exit(1)
+PY

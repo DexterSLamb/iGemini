@@ -1,0 +1,25 @@
+#!/bin/bash
+# iGemini .pkg postinstall（以 root 运行）—— 清隔离属性 + 装【全局】LaunchAgent + 给当前登录用户立即加载。
+# 路线1（全局到底）：runtime/app/LaunchAgent 三者都全局；key 与 ~/.claude-igemini 天然 per-user（各用户各自）。
+IG="/Applications/iGemini"
+APP="/Applications/iGemini.app"
+# 1) 清 quarantine（打包二进制下载来的，否则 Gatekeeper 拦）
+/usr/bin/xattr -dr com.apple.quarantine "$IG" "$APP" 2>/dev/null || true
+# 2) ad-hoc 重签壳（保险，AS 要求签名）
+/usr/bin/codesign --force --deep -s - "$APP" 2>/dev/null || true
+# 3) LaunchAgent 装到【全局 /Library/LaunchAgents】→ 每个用户登录都自动加载（与全局 app/runtime 配套）
+LA="/Library/LaunchAgents"; /bin/mkdir -p "$LA"
+/usr/bin/sed "s|__IG__|$IG|g" "$IG/com.igemini.web.plist" > "$LA/com.igemini.web.plist"
+/usr/sbin/chown root:wheel "$LA/com.igemini.web.plist"; /bin/chmod 644 "$LA/com.igemini.web.plist"
+# 4) 当前登录用户：清旧 per-user 残留 plist（避免双加载）+ 清自动开壳标记 + 立即加载全局服务
+U=$(/usr/bin/stat -f%Su /dev/console 2>/dev/null)
+if [ -n "$U" ] && [ "$U" != "root" ]; then
+  UID_=$(/usr/bin/id -u "$U")
+  HOME_=$(/usr/bin/dscl . -read "/Users/$U" NFSHomeDirectory 2>/dev/null | awk '{print $2}'); [ -z "$HOME_" ] && HOME_="/Users/$U"
+  /bin/rm -f "$HOME_/Library/LaunchAgents/com.igemini.web.plist" 2>/dev/null || true   # 旧版本曾装在用户级，清掉以免双加载
+  /bin/rm -f "$HOME_/.config/igemini/.app-opened" 2>/dev/null || true                  # 本次装完自动弹一次桌面壳
+  /bin/launchctl bootout "gui/$UID_/com.igemini.web" 2>/dev/null || true
+  /bin/launchctl bootstrap "gui/$UID_" "$LA/com.igemini.web.plist" 2>/dev/null || true
+fi
+# 其它用户：下次登录时 /Library/LaunchAgents 自动加载（各用各自 ~/.config key 与 ~/.claude-igemini）
+exit 0

@@ -1,0 +1,43 @@
+"menu.show"   = "显示 iGemini";
+"menu.reload" = "重新加载";
+"menu.quit"   = "退出 iGemini";
+
+"menu.about"    = "关于 iGemini";
+
+"loading.title" = "正在启动 iGemini…";
+"loading.hint"  = "正在等待本地服务就绪";
+"loading.slow.title" = "仍在启动…";
+"loading.slow.hint"  = "比平时慢一些,仍在重试…";
+
+"menu.view"       = "视图";
+"menu.zoomIn"     = "放大";
+"menu.zoomOut"    = "缩小";
+"menu.zoomReset"  = "实际大小";
+
+"menu.edit"       = "编辑";
+"menu.undo"       = "撤销";
+"menu.redo"       = "重做";
+"menu.cut"        = "剪切";
+"menu.copy"       = "复制";
+"menu.paste"      = "粘贴";
+"menu.pasteMatch" = "粘贴并匹配样式";
+"menu.delete"     = "删除";
+"menu.selectAll"  = "全选";
+
+"menu.editKey"     = "配置密钥…";
+"keyform.title"    = "iGemini 配置密钥";
+"keyform.sub"      = "密钥只保存在你本机,不会上传。";
+"keyform.required" = "必填";
+"keyform.optional" = "选填";
+"keyform.save"     = "保存";
+"keyform.cancel"   = "取消";
+"keyform.ds.desc"  = "AI 的大脑:对话、推理、写代码都靠它。";
+"keyform.ds.apply" = "去 platform.deepseek.com 申请";
+"keyform.sp.desc"  = "增强联网搜索;不填也能搜(用内置兜底)。";
+"keyform.sp.apply" = "去 serper.dev 申请(免费额度够用)";
+"keyform.qk.desc"  = "让 AI 看懂图片、认出图中的字(OCR)。";
+"keyform.qk.apply" = "去 阿里云百炼 / DashScope 申请";
+"keyform.qb.desc"  = "阿里给你的接入地址,和上面的 Qwen Key 配对使用。";
+"keyform.err.ds"      = "密钥格式不对,应以 sk- 开头";
+"keyform.err.invalid" = "密钥无效,请核对";
+"keyform.verifying"   = "验证中…";

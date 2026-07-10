@@ -1,0 +1,45 @@
+iGemini — orchestration layer
+Copyright (C) 2026 DexterSLamb
+
+This repository as a whole is licensed under the GNU Affero General Public
+License v3.0 (see LICENSE).
+
+iGemini is a hobby / educational project. It is NOT affiliated with,
+endorsed by, or connected to Google (Gemini), Anthropic (Claude), or
+Apple (Siri) in any way.
+
+════════════════════════════════════════════════════════════════════════
+Third-party components & corresponding source (attribution)
+════════════════════════════════════════════════════════════════════════
+
+[1] claudecodeui (product name: CloudCLI)
+    Author  : siteboon
+    License : AGPL-3.0
+    Upstream: https://github.com/siteboon/claudecodeui
+    Baseline: commit 4712431be81718dfb559ef43d7d7d5315bf4e01a
+    Changes : vendor/igemini-claudecodeui.patch (white-labels it to iGemini)
+    Rebuild : git clone the upstream repo
+              → git checkout 4712431be81718dfb559ef43d7d7d5315bf4e01a
+              → git apply --binary vendor/igemini-claudecodeui.patch
+              …reproduces the claudecodeui source used by the installers,
+              byte for byte.
+    Note    : Each OS has a small platform-specific factory tweak that is
+              NOT part of the shared patch (macOS: session discovery honoring
+              CLAUDE_CONFIG_DIR; Windows: permission-bypass in the compiled
+              dist-server). Ask the maintainer for that corresponding source.
+
+[2] Inno Setup Simplified-Chinese translation
+    File    : scripts/windows/installer/ChineseSimplified.isl
+    Author  : Zhenghan Yang
+    Upstream: https://github.com/kira-96/Inno-Setup-Chinese-Simplified-Translation
+    License : redistributed under the Inno Setup terms
+
+[3] Brand assets — assets/igemini-icon.png (and the icon/favicon copies
+    embedded in the patch)
+    A stylized "assistant orb" logo. Provided as-is for this project's
+    branding.
+
+[4] Runtime dependencies (invoked at runtime, NOT redistributed by this
+    repository; each under its own license): Node.js, @anthropic-ai/claude-code,
+    Python, markdown, PyMuPDF (AGPL), pdfplumber, python-docx, openpyxl,
+    pandoc (GPL), chrome-headless-shell, WebView2, WebKitGTK.

@@ -1,0 +1,15 @@
+[Unit]
+Description=iGemini Web (claudecodeui -> Claude Code -> DeepSeek)
+Documentation=https://github.com/siteboon/claudecodeui
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/igemini/start-web.sh
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=10
+
+[Install]
+WantedBy=default.target

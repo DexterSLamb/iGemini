@@ -1,0 +1,43 @@
+"menu.show"   = "Show iGemini";
+"menu.reload" = "Reload";
+"menu.quit"   = "Quit iGemini";
+
+"menu.about"    = "About iGemini";
+
+"loading.title" = "Starting iGemini…";
+"loading.hint"  = "Waiting for the local service to be ready";
+"loading.slow.title" = "Still starting…";
+"loading.slow.hint"  = "Taking a bit longer than usual, still retrying…";
+
+"menu.view"       = "View";
+"menu.zoomIn"     = "Zoom In";
+"menu.zoomOut"    = "Zoom Out";
+"menu.zoomReset"  = "Actual Size";
+
+"menu.edit"       = "Edit";
+"menu.undo"       = "Undo";
+"menu.redo"       = "Redo";
+"menu.cut"        = "Cut";
+"menu.copy"       = "Copy";
+"menu.paste"      = "Paste";
+"menu.pasteMatch" = "Paste and Match Style";
+"menu.delete"     = "Delete";
+"menu.selectAll"  = "Select All";
+
+"menu.editKey"     = "API Keys…";
+"keyform.title"    = "iGemini API Keys";
+"keyform.sub"      = "Keys are stored only on this Mac and never uploaded.";
+"keyform.required" = "Required";
+"keyform.optional" = "Optional";
+"keyform.save"     = "Save";
+"keyform.cancel"   = "Cancel";
+"keyform.ds.desc"  = "The AI brain — powers chat, reasoning and coding.";
+"keyform.ds.apply" = "Get one at platform.deepseek.com";
+"keyform.sp.desc"  = "Better web search; a built-in fallback works without it.";
+"keyform.sp.apply" = "Get one at serper.dev";
+"keyform.qk.desc"  = "Lets the AI read images and text in pictures (OCR).";
+"keyform.qk.apply" = "Get one at Aliyun Bailian / DashScope";
+"keyform.qb.desc"  = "The endpoint Aliyun gives you, paired with the Qwen key above.";
+"keyform.err.ds"      = "Wrong format — should start with sk-";
+"keyform.err.invalid" = "Invalid key — please check";
+"keyform.verifying"   = "Verifying…";

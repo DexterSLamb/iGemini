@@ -1,0 +1,8 @@
+#!/bin/bash
+# md2docx <input.md> [output.docx] — Markdown → Word（pandoc）。
+# 部署为全局命令：cp 到 /usr/local/bin/md2docx。依赖：pandoc（官方二进制装在 /usr/local/bin）。
+set -e
+SRC="$1"; [ -f "$SRC" ] || { echo "用法: md2docx <input.md> [output.docx]"; exit 1; }
+OUT="${2:-${SRC%.md}.docx}"
+/usr/local/bin/pandoc "$SRC" -o "$OUT"
+echo "已生成 DOCX: $OUT"

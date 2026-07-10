@@ -1,0 +1,66 @@
+#!/bin/bash
+# parsedoc <文件> — 提取文档文字/内容(PDF/Word/Excel/纯文本)到 stdout。
+# PDF：pymupdf 抽正文 + pdfplumber 抽表格(分列，pymupdf find_tables 兜底)；
+#      无文字层(扫描件)自动转图走 describe-image(Qwen-VL OCR)。CC 直接调，无需判断用哪个库。
+# 部署为全局命令：cp 到 /usr/local/bin/parsedoc。依赖：pymupdf/pdfplumber/python-docx/openpyxl/textutil。
+set -e
+F="$1"; [ -f "$F" ] || { echo "用法: parsedoc <文件>"; exit 1; }
+ext=$(printf '%s' "${F##*.}" | tr 'A-Z' 'a-z')
+case "$ext" in
+  pdf)
+    python3 - "$F" <<'PY'
+import sys, os, tempfile, subprocess, fitz
+path=sys.argv[1]; doc=fitz.open(path)
+pages=[(i,p.get_text().strip()) for i,p in enumerate(doc)]
+total="".join(t for _,t in pages).strip()
+if len(total)>=20:
+    for i,t in pages: print("=== 第%d页 ==="%(i+1)); print(t)
+    tables=[]
+    try:
+        import pdfplumber
+        with pdfplumber.open(path) as pdf:
+            for pi,pg in enumerate(pdf.pages):
+                for tbl in (pg.extract_tables() or []): tables.append((pi,tbl))
+    except Exception as e: sys.stderr.write("[parsedoc] pdfplumber: %s\n"%e)
+    if not tables:
+        try:
+            for pi,pg in enumerate(doc):
+                for t in pg.find_tables().tables: tables.append((pi,t.extract()))
+        except Exception as e: sys.stderr.write("[parsedoc] find_tables: %s\n"%e)
+    for n,(pi,tbl) in enumerate(tables):
+        print("\n=== 第%d页·表格%d ==="%(pi+1,n+1))
+        for row in tbl: print(" | ".join("" if c is None else str(c).replace("\n"," ").strip() for c in row))
+else:
+    sys.stderr.write("[parsedoc] PDF 无文字层，转图走 Qwen-VL OCR…\n")
+    for i,page in enumerate(doc):
+        pix=page.get_pixmap(dpi=200); fd,tmp=tempfile.mkstemp(suffix=".png"); os.close(fd); pix.save(tmp)
+        try:
+            r=subprocess.run(["/usr/local/bin/describe-image",tmp,"逐字读出这一页所有文字，保留顺序与表格结构。"],capture_output=True,text=True,timeout=150)
+            print("=== 第%d页(OCR) ==="%(i+1)); print((r.stdout or r.stderr).strip())
+        finally: os.remove(tmp)
+PY
+    ;;
+  docx)
+    python3 - "$F" <<'PY'
+import sys, docx
+d=docx.Document(sys.argv[1])
+for p in d.paragraphs:
+    if p.text.strip(): print(p.text)
+for k,tb in enumerate(d.tables):
+    print("\n=== 表格%d ==="%(k+1))
+    for row in tb.rows: print(" | ".join(c.text.strip() for c in row.cells))
+PY
+    ;;
+  doc|rtf|odt) textutil -convert txt -stdout "$F" ;;
+  xlsx)
+    python3 - "$F" <<'PY'
+import sys, openpyxl
+wb=openpyxl.load_workbook(sys.argv[1], data_only=True)
+for ws in wb.worksheets:
+    print("=== 工作表:%s ==="%ws.title)
+    for r in ws.iter_rows(values_only=True): print(" | ".join("" if v is None else str(v) for v in r))
+PY
+    ;;
+  txt|md|csv|tsv|json|log|html|xml|yaml|yml) cat "$F" ;;
+  *) echo "[parsedoc] 不支持: .$ext" >&2; exit 1 ;;
+esac

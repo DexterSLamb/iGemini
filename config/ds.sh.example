@@ -1,0 +1,42 @@
+#!/bin/bash
+# DeepSeek 后端的 Claude Code 启动器（脱敏参考模板）。
+# 用法：复制为 ds.sh、chmod +x；key 单独存到 ~/.config/deepseek/key（见下），然后 ./ds.sh [--flash]
+# 设计：本文件不含任何明文 key——key 与 Serper/Qwen 一样存独立文件、运行时读取。
+
+# ===== DeepSeek 鉴权（key 存 ~/.config/deepseek/key, chmod 600；本文件绝不硬编码 key）=====
+#   首次设置： mkdir -p ~/.config/deepseek && printf '%s' '<你的 DeepSeek key sk-...>' > ~/.config/deepseek/key && chmod 600 ~/.config/deepseek/key
+export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
+export ANTHROPIC_AUTH_TOKEN="$(cat "$HOME/.config/deepseek/key" 2>/dev/null)"
+[ -n "$ANTHROPIC_AUTH_TOKEN" ] || echo "⚠️  ~/.config/deepseek/key 为空或缺失 → DeepSeek 鉴权会失败" >&2
+unset ANTHROPIC_API_KEY   # 与 AUTH_TOKEN 二选一，防冲突弹窗
+
+# ===== 模型路由（主用 pro，子代理/杂活用 flash 省钱）=====
+export ANTHROPIC_MODEL="deepseek-v4-pro[1m]"
+export ANTHROPIC_DEFAULT_OPUS_MODEL="deepseek-v4-pro[1m]"
+export ANTHROPIC_DEFAULT_SONNET_MODEL="deepseek-v4-pro[1m]"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="deepseek-v4-flash"
+export CLAUDE_CODE_SUBAGENT_MODEL="deepseek-v4-flash"
+export CLAUDE_CODE_EFFORT_LEVEL="max"
+export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1   # 关遥测/错误上报/自动更新等
+
+# ===== 幂等写配置：跳过 Anthropic 登录/WebFetch 预检 =====
+command -v node >/dev/null 2>&1 && node -e '
+const fs=require("fs"),os=require("os"),p=require("path"),h=os.homedir();
+const set=(f,k,v)=>{let d={};try{d=JSON.parse(fs.readFileSync(f,"utf8"))}catch(e){}; if(typeof d!=="object"||!d||Array.isArray(d))d={}; if(d[k]===v)return; d[k]=v; fs.mkdirSync(p.dirname(f),{recursive:true}); fs.writeFileSync(f,JSON.stringify(d,null,2));};
+set(p.join(h,".claude.json"),"hasCompletedOnboarding",true);
+set(p.join(h,".claude","settings.json"),"skipWebFetchPreflight",true);
+' 2>/dev/null
+
+# ===== 启动 =====
+cd "$(dirname "$0")" || exit 1
+MODEL="deepseek-v4-pro[1m]"
+[ "$1" = "--flash" ] && { MODEL="deepseek-v4-flash"; echo "📦 Flash 模型"; }
+
+# 仅当“当前工作目录”已有历史会话才 --resume；首次无历史则新建
+# （否则 --resume 弹空列表、只能 ESC 退出）
+PROJ="$HOME/.claude/projects/$(printf '%s' "$PWD" | sed 's/[^A-Za-z0-9]/-/g')"
+if ls "$PROJ"/*.jsonl >/dev/null 2>&1; then
+  claude --model "$MODEL" --dangerously-skip-permissions --resume
+else
+  claude --model "$MODEL" --dangerously-skip-permissions
+fi

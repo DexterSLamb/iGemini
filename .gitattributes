@@ -1,0 +1,19 @@
+# 跨 OS 行尾规范化：入库统一 LF，检出按平台。防止 Windows 提交时整文件“全变更”噪音。
+* text=auto eol=lf
+
+# Unix 脚本即使在 Windows 检出也必须保持 LF
+*.sh    text eol=lf
+
+# Windows 脚本保持 CRLF
+*.ps1   text eol=crlf
+*.psm1  text eol=crlf
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+
+# 二进制：不碰行尾、不按文本 diff
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- launchd LaunchAgent：开机(登录)自启 claudecodeui 网页层。
+     用法：把 __HOME__ 全部替换成绝对家目录(如 /Users/yourname)，存为
+     ~/Library/LaunchAgents/com.cloudcli.deepseek.plist，然后：
+       plutil -lint <plist>
+       launchctl bootstrap gui/$(id -u) <plist>
+     注意：launchd 不展开 ~ 或 $HOME，plist 里必须用绝对路径。 -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.cloudcli.deepseek</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>__HOME__/Documents/ClaudeCode/start-web.sh</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>WorkingDirectory</key><string>__HOME__/Documents/ClaudeCode/claudecodeui</string>
+  <key>StandardOutPath</key><string>__HOME__/Documents/ClaudeCode/web.log</string>
+  <key>StandardErrorPath</key><string>__HOME__/Documents/ClaudeCode/web.log</string>
+</dict>
+</plist>
