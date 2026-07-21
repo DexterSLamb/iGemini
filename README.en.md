@@ -6,7 +6,7 @@ This project grew out of a prank: install macOS on a Google Pixelbook Go, write 
 
 ![iGemini screenshot](assets/screenshot.png)
 
-> **Disclaimer.** iGemini is a hobby / educational project. It is **not** affiliated with, endorsed by, or connected to Google (Gemini), Anthropic (Claude), or Apple (Siri) in any way.
+> **Disclaimer.** iGemini is an independent, non-commercial project. It is **not** affiliated with, endorsed by, or connected to Google (Gemini), Anthropic (Claude), or Apple (Siri) in any way.
 
 ---
 

@@ -6,7 +6,7 @@
 
 ![iGemini 截图](assets/screenshot.png)
 
-> **说明**：iGemini 是个人 / 教育性质的玩具项目，与 Google（Gemini）、Anthropic（Claude）、Apple（Siri）**没有任何**隶属、背书或合作关系。
+> **说明**：iGemini 是一个独立的非商业项目，与 Google（Gemini）、Anthropic（Claude）、Apple（Siri）**没有任何**隶属、背书或合作关系。
 
 ---
 
