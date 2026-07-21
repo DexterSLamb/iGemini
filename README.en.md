@@ -107,8 +107,6 @@ This is a **source repository** (AGPL-3.0 — build it / audit it yourself). Eac
   # native shell: scripts/linux/shell-app/igemini-shell.py (GTK3 + WebKitGTK)
   ```
 
-> If the default binary sources are slow in your region, pass a proxy: `PROXY=http://127.0.0.1:7897 bash …` (or PowerShell's `-Proxy …`); otherwise it connects directly.
-
 **Data flow**: `Browser ⇄ claudecodeui (iGemini) ──spawn──▶ claude CLI ──env──▶ api.deepseek.com/anthropic`. The child process inherits the launcher's environment, so injecting the DeepSeek config at start-up routes the whole chain through DeepSeek; the service binds `127.0.0.1:8888` (local only). Keys are injected at runtime from `~/.config/deepseek/key` — never hard-coded, never committed.
 
 This repository does **not** contain the source of Claude Code or claudecodeui — claudecodeui is fetched at a pinned upstream commit and white-labeled by applying [`vendor/igemini-claudecodeui.patch`](vendor/igemini-claudecodeui.patch) (**applied, never forked**). The single-source version number lives in `scripts/<os>/installer/VERSION`.
