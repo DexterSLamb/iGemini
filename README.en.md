@@ -39,11 +39,11 @@ Under the hood it stitches three things together: the **claudecodeui** web UI ([
 
 Download the installer for your platform and double-click to install (regular user privileges, no admin needed; any old version is stopped automatically first).
 
-| Platform | Download (v1.1.0) |
+| Platform | Download (v1.1.1) |
 |---|---|
-| **macOS (Apple Silicon / M-series)** | [iGemini-Installer-arm64-v1.1.0.pkg](https://github.com/DexterSLamb/iGemini/releases/download/v1.1.0/iGemini-Installer-arm64-v1.1.0.pkg) |
-| **macOS (Intel)** | [iGemini-Installer-x64-v1.1.0.pkg](https://github.com/DexterSLamb/iGemini/releases/download/v1.1.0/iGemini-Installer-x64-v1.1.0.pkg) |
-| **Windows 64-bit** | [iGemini-Setup-x64-v1.1.0.exe](https://github.com/DexterSLamb/iGemini/releases/download/v1.1.0/iGemini-Setup-x64-v1.1.0.exe) |
+| **macOS (Apple Silicon / M-series)** | [iGemini-Installer-arm64-v1.1.1.pkg](https://github.com/DexterSLamb/iGemini/releases/download/v1.1.1/iGemini-Installer-arm64-v1.1.1.pkg) |
+| **macOS (Intel)** | [iGemini-Installer-x64-v1.1.1.pkg](https://github.com/DexterSLamb/iGemini/releases/download/v1.1.1/iGemini-Installer-x64-v1.1.1.pkg) |
+| **Windows 64-bit** | [iGemini-Setup-x64-v1.1.1.exe](https://github.com/DexterSLamb/iGemini/releases/download/v1.1.1/iGemini-Setup-x64-v1.1.1.exe) |
 | **Linux (Debian / Deepin family)** | Backend + native WebKitGTK shell are done; a one-click installer isn't built yet — see "Build from source" below |
 
 After installing, it starts the background service and opens the iGemini window; from then on it **auto-starts on login** — just open it whenever.
