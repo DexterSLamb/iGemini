@@ -106,6 +106,25 @@ else
   git checkout -q FETCH_HEAD
   ok "克隆 @ $(git rev-parse --short HEAD)"
   git apply --binary "$PATCH"; ok "白标 patch 已套用"
+  # bug#1 修（Linux 侧补丁，不进共享 patch）：让会话发现/命名认 CLAUDE_CONFIG_DIR（改 .ts 源，须在 build 前）。
+  # 否则隔离（CLAUDE_CONFIG_DIR=~/.claude-igemini）下仍读 homedir/.claude → 取不到会话名 → 侧栏全 "New Session"。
+  python3 - "$CC/server" <<'PYEOF'
+import sys, os
+base = sys.argv[1]
+edits = {
+  'modules/providers/list/claude/claude-session-synchronizer.provider.ts':
+    ("path.join(os.homedir(), '.claude')",
+     "(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'))"),
+  'modules/providers/services/sessions-watcher.service.ts':
+    ("path.join(os.homedir(), '.claude', 'projects')",
+     "path.join(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'), 'projects')"),
+}
+for rel,(old,new) in edits.items():
+    p = os.path.join(base, rel); s = open(p, encoding='utf-8').read()
+    assert old in s, "CLAUDE_CONFIG_DIR 补丁模式没找到（上游可能变了）: "+rel
+    open(p,'w',encoding='utf-8').write(s.replace(old, new, 1))
+print("  会话发现 → 认 CLAUDE_CONFIG_DIR（synchronizer + watcher）")
+PYEOF
   # npm ci 不走代理（npmmirror 国内直连；代理会触发 npm 旧版 HttpsProxyAgent bug）
   npm ci; ok "npm ci 完成"
   npm run build; ok "build 完成（dist + dist-server）"
@@ -118,6 +137,50 @@ new="if (permissionMode !== 'plan') { // [iGemini] always bypass permissions (Li
 if "[iGemini] always bypass" in s: print("  bypass 补丁已在，跳过")
 elif old in s: open(f,"w",encoding="utf-8").write(s.replace(old,new)); print("  bypass-permissions 补丁已套用")
 else: print("  ! 未匹配 skipPermissions 原串（上游可能变了，需人工确认）")
+PYEOF
+  # bug#1 watcher 回归修复（绿点/loading）：会话发现认了 CLAUDE_CONFIG_DIR 后，watcher 会对【正在跑的当前会话】
+  # 广播不含运行态的 upsert → 冲掉前端绿点/loading。用 isClaudeSDKSessionActive 抑制。
+  python3 - "$CC/dist-server/server/modules/providers/services/sessions-watcher.service.js" <<'PYEOF'
+import sys; p=sys.argv[1]; s=open(p,encoding="utf-8").read()
+imp="import { generateDisplayName } from '../../../modules/projects/index.js';"
+loop="for (const updatedSessionId of queuedUpdate.updatedSessionIds) {"
+assert imp in s and loop in s, "watcher 锚点没找到（上游可能变了）"
+if "isClaudeSDKSessionActive" not in s:
+    s=s.replace(imp, imp+"\nimport { isClaudeSDKSessionActive } from '../../../claude-sdk.js';",1)
+if "isClaudeSDKSessionActive(updatedSessionId)" not in s:
+    s=s.replace(loop, loop+"\n            if (isClaudeSDKSessionActive(updatedSessionId)) { continue; } // [iGemini] 正在跑的会话别广播 upsert，避免冲掉运行态(绿点/loading)",1)
+    open(p,"w",encoding="utf-8").write(s); print("  watcher suppress-active 修复已套")
+else: print("  watcher 修复已在，跳过")
+PYEOF
+  # Shell 终端免权限：buildShellCommand 拼的 claude 命令没带 --dangerously-skip-permissions
+  # → 网页 Shell 终端跑 claude 会不停问权限（Chat 走 SDK 已 bypass，唯独 Shell 这条漏了）。
+  python3 - "$CC/dist-server/server/modules/websocket/services/shell-websocket.service.js" <<'PYEOF'
+import sys; p=sys.argv[1]; s=open(p,encoding="utf-8").read()
+F=" --dangerously-skip-permissions"
+reps=[
+ ("const command = initialCommand || 'claude';",
+  "const command = initialCommand || 'claude"+F+"';"),
+ ('claude --resume "${resumeSessionId}"; if ($LASTEXITCODE -ne 0) { claude }',
+  'claude'+F+' --resume "${resumeSessionId}"; if ($LASTEXITCODE -ne 0) { claude'+F+' }'),
+ ('claude --resume "${resumeSessionId}" || claude',
+  'claude'+F+' --resume "${resumeSessionId}" || claude'+F),
+]
+if "[iGemini] shell bypass" not in s:
+    n=0
+    for old,new in reps:
+        if old in s: s=s.replace(old,new,1); n+=1
+    s=s.replace("function buildShellCommand","// [iGemini] shell bypass\nfunction buildShellCommand",1)
+    open(p,"w",encoding="utf-8").write(s); print("  shell-websocket claude bypass 已套（%d/3 处；Shell 终端免权限）"%n)
+else: print("  shell bypass 已在，跳过")
+PYEOF
+  # JWT 有效期 7d → 3650d：壳只在启动时自动登录一次、不续签，7 天后 token 过期 → 聊天 WS 鉴权失败。
+  # 本机 / 固定账号 iGemini/iGemini 场景下长效 token 无实际危害；将来做远程鉴权改造时再收回。
+  python3 - "$CC/dist-server/server/middleware/auth.js" <<'PYEOF'
+import sys; f=sys.argv[1]; s=open(f,encoding="utf-8").read()
+if "expiresIn: '3650d'" in s: print("  JWT 有效期已改，跳过")
+elif "expiresIn: '7d'" in s:
+    open(f,"w",encoding="utf-8").write(s.replace("expiresIn: '7d'","expiresIn: '3650d'")); print("  JWT 有效期 7d → 3650d")
+else: print("  ! JWT expiresIn 锚点没找到（上游可能变了，需人工确认）")
 PYEOF
   # 标题白标补漏：index.html <title> CloudCLI UI → iGemini（白标 patch 漏了这处）
   sed -i 's|<title>CloudCLI UI</title>|<title>iGemini</title>|' dist/index.html index.html 2>/dev/null || true

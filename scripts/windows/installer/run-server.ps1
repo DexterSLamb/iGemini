@@ -40,6 +40,8 @@ $env:ANTHROPIC_MODEL                = 'deepseek-v4-pro[1m]'
 $env:ANTHROPIC_DEFAULT_OPUS_MODEL   = 'deepseek-v4-pro[1m]'
 $env:ANTHROPIC_DEFAULT_SONNET_MODEL = 'deepseek-v4-pro[1m]'
 $env:ANTHROPIC_DEFAULT_HAIKU_MODEL  = 'deepseek-v4-flash'
+# [iGemini] 隔离：iGemini 的 claude 会话/配置写进独立目录，不污染用户日常 Claude Code 的 ~/.claude（与 mac/Linux 一致）。
+$env:CLAUDE_CONFIG_DIR              = Join-Path $env:USERPROFILE '.claude-igemini'
 $env:CLAUDE_CODE_SUBAGENT_MODEL     = 'deepseek-v4-flash'
 $env:CLAUDE_CODE_EFFORT_LEVEL       = 'max'
 $env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '1'

@@ -172,6 +172,13 @@ if "[iGemini] shell bypass" not in s:
     open(p,"w",encoding="utf-8").write(s)
     print("shell-websocket claude bypass 已套（Shell 终端免权限）")
 PY
+# JWT 有效期 7d → 3650d：壳只在启动时自动登录一次、不续签，7 天后 token 过期 → 聊天 WS 鉴权失败。
+# 本机 / 固定账号 iGemini/iGemini 场景下长效 token 无实际危害；将来做远程鉴权改造时再收回。
+python3 - "$STAGE/claudecodeui/dist-server/server/middleware/auth.js" <<'PY'
+import sys; f=sys.argv[1]; s=open(f,encoding="utf-8").read()
+if "expiresIn: '3650d'" not in s and "expiresIn: '7d'" in s:
+    open(f,"w",encoding="utf-8").write(s.replace("expiresIn: '7d'","expiresIn: '3650d'")); print("JWT 有效期 7d → 3650d")
+PY
 sed -i '' 's|<title>CloudCLI UI</title>|<title>iGemini</title>|' "$STAGE/claudecodeui/dist/index.html" "$STAGE/claudecodeui/index.html" 2>/dev/null || true
 ( cd "$STAGE/claudecodeui" && env "${NPMENV[@]}" npm prune --omit=dev >/dev/null 2>&1 || true )
 ok "dist + dist-server 就绪，已 bypass/标题/prune"

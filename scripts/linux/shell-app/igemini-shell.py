@@ -514,26 +514,33 @@ class Shell(Gtk.Window):
         self.auth_done = False          # 后端重启 → 重走一次自动登录
         GLib.idle_add(lambda: (self.show_loader_and_connect(), False)[1])
 
-    # ---- 关于（原生 GTK AboutDialog）----
+    # ---- 关于（极简窗口，对齐 mac：只显 图标/名字/版本/署名，无正文按钮，Esc 或标题栏 × 关闭）----
     def show_about(self):
-        d = Gtk.AboutDialog(transient_for=self, modal=True)
-        d.set_default_size(420, -1)
-        d.set_program_name("iGemini")
-        d.set_version("版本 " + VERSION)
-        d.set_copyright("© 2026 iGemini · CloudCLI (AGPL-3.0)")
-        # 「许可」按钮 → 显示 AGPL 全文；「项目主页与源码」→ 指向随分发处提供的对应源码。
-        # 这同时满足 AGPL 对「让用户看得到源码在哪」的要求。
-        d.set_license_type(Gtk.License.AGPL_3_0)
-        d.set_website("https://github.com/DexterSLamb/iGemini")
-        d.set_website_label("项目主页与源码")
+        w = Gtk.Window(title="关于 iGemini")
+        w.set_transient_for(self)
+        w.set_modal(True)
+        w.set_resizable(False)
+        w.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
+        w.set_border_width(28)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        w.add(box)
         ico = app_icon_path()
         if ico:
             try:
-                d.set_logo(GdkPixbuf.Pixbuf.new_from_file_at_size(ico, 96, 96))
+                box.pack_start(Gtk.Image.new_from_pixbuf(
+                    GdkPixbuf.Pixbuf.new_from_file_at_size(ico, 96, 96)), False, False, 0)
             except Exception:
                 pass
-        d.connect("response", lambda dlg, _r: dlg.destroy())
-        d.show_all()
+        name = Gtk.Label()
+        name.set_markup('<span size="x-large" weight="bold">iGemini</span>')
+        ver = Gtk.Label(label="版本 " + VERSION)
+        cr = Gtk.Label()
+        cr.set_markup('<span size="small">© 2026 iGemini · CloudCLI（AGPL-3.0）</span>')
+        for lbl in (name, ver, cr):
+            box.pack_start(lbl, False, False, 0)
+        w.connect("key-press-event",
+                  lambda _w, e: w.destroy() if e.keyval == Gdk.KEY_Escape else False)
+        w.show_all()
 
 
 if __name__ == "__main__":

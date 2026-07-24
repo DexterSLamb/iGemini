@@ -132,6 +132,13 @@ try {
   Native { git checkout -q FETCH_HEAD } 'git checkout'
   Native { git apply --binary --check $Patch } 'git apply --check'   # dry-run：patch 冲突/空/格式错立刻暴露
   Native { git apply --binary $Patch } 'git apply'                   # 81 文件白标；冲突即上游漂移 → 见 vendor/README.md
+  # [iGemini] 会话发现认 CLAUDE_CONFIG_DIR（改 .ts 源，须在 build 前）：隔离后 claudecodeui 默认读 ~/.claude 取不到会话名 → 侧栏全 New Session。
+  $syncTs = Join-Path $ccBuild 'server\modules\providers\list\claude\claude-session-synchronizer.provider.ts'
+  if(Test-Path $syncTs){ $t=[IO.File]::ReadAllText($syncTs); $o="path.join(os.homedir(), '.claude')"; $n="(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'))"
+    if($t.Contains($o)){ [IO.File]::WriteAllText($syncTs, $t.Replace($o,$n)); Say 'synchronizer.ts → CLAUDE_CONFIG_DIR' } else { Write-Host 'WARN: synchronizer.ts 锚点没找到' -ForegroundColor Yellow } }
+  $watchTs = Join-Path $ccBuild 'server\modules\providers\services\sessions-watcher.service.ts'
+  if(Test-Path $watchTs){ $t=[IO.File]::ReadAllText($watchTs); $o="path.join(os.homedir(), '.claude', 'projects')"; $n="path.join(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'), 'projects')"
+    if($t.Contains($o)){ [IO.File]::WriteAllText($watchTs, $t.Replace($o,$n)); Say 'watcher.ts → CLAUDE_CONFIG_DIR' } else { Write-Host 'WARN: watcher.ts 锚点没找到' -ForegroundColor Yellow } }
   Native { & $NpmCmd ci } 'npm ci'                                   # 严格按 lockfile，比 npm install 可靠
   Native { & $NpmCmd run build } 'npm run build'                    # 出 dist\ + dist-server\
   Native { & $NpmCmd prune --production } 'npm prune'               # 砍掉 devDependencies（646MB→~200MB）
@@ -160,6 +167,25 @@ if(Test-Path $shellsvc){
     [IO.File]::WriteAllText($shellsvc, $svc); Say 'shell-websocket.service.js → Shell 终端也免权限(仅Win)'
   } else { Write-Host 'shell-websocket 已含 shell bypass，跳过' -ForegroundColor DarkGray }
 } else { Write-Host 'WARN: shell-websocket.service.js 没找到，跳过 Shell bypass patch' -ForegroundColor Yellow }
+# [iGemini · 三平台通病] JWT 有效期 7d → 3650d：壳只在启动时自动登录一次、不续签，7 天后 token 过期 → 聊天 WS 鉴权失败。
+# 本机 / 固定账号 iGemini/iGemini 场景下长效 token 无实际危害；将来做远程鉴权改造时再收回。
+$authjs = Join-Path $ccBuild 'dist-server\server\middleware\auth.js'
+if(Test-Path $authjs){
+  $authTxt = [IO.File]::ReadAllText($authjs)
+  if($authTxt.Contains("expiresIn: '7d'")){ [IO.File]::WriteAllText($authjs, $authTxt.Replace("expiresIn: '7d'","expiresIn: '3650d'")); Say 'auth.js → JWT 有效期 7d→3650d' }
+  elseif($authTxt.Contains("expiresIn: '3650d'")){ Write-Host 'auth.js JWT 有效期已改，跳过' -ForegroundColor DarkGray }
+  else { Write-Host 'WARN: auth.js 的 expiresIn 7d 没找到（上游可能变了）' -ForegroundColor Yellow }
+}
+# [iGemini] watcher 回归修复（绿点/loading）：会话发现认了 CLAUDE_CONFIG_DIR 后，watcher 对正在跑的会话广播 upsert 会冲掉运行态。
+$watchJs = Join-Path $ccBuild 'dist-server\server\modules\providers\services\sessions-watcher.service.js'
+if(Test-Path $watchJs){
+  $w = [IO.File]::ReadAllText($watchJs)
+  if(-not $w.Contains('isClaudeSDKSessionActive')){
+    $w = $w.Replace("import { generateDisplayName } from '../../../modules/projects/index.js';", "import { generateDisplayName } from '../../../modules/projects/index.js';`r`nimport { isClaudeSDKSessionActive } from '../../../claude-sdk.js';")
+    $w = $w.Replace("for (const updatedSessionId of queuedUpdate.updatedSessionIds) {", "for (const updatedSessionId of queuedUpdate.updatedSessionIds) {`r`n            if (isClaudeSDKSessionActive(updatedSessionId)) { continue; } // [iGemini]")
+    [IO.File]::WriteAllText($watchJs, $w); Say 'sessions-watcher.js → suppress-active(绿点/loading)'
+  } else { Write-Host 'watcher 已含 suppress-active，跳过' -ForegroundColor DarkGray }
+}
 # 搬到 staging。⚠️ 只用【绝对路径】剔顶层 .git —— 绝不能按名字 /XD src，那会把 node_modules 里
 # 各个包自己的 src\ 也一并删掉（web-push 等的入口就在 src\index.js），弄坏运行期依赖 → 服务起不来。
 Mirror $ccBuild (Join-Path $Stage 'claudecodeui') -xd @((Join-Path $ccBuild '.git')) -xf @('*.map')
