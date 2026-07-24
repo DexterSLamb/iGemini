@@ -199,10 +199,15 @@ else
 fi
 
 # ---- 4) 系统能力工具（apt）----
-say "4/10 系统工具（pandoc / chromium / tesseract）"
+say "4/10 系统工具（pandoc / chromium / tesseract / CJK 字体）"
 sudo apt-get install -y pandoc tesseract-ocr tesseract-ocr-chi-sim >/dev/null
 sudo apt-get install -y chromium >/dev/null 2>&1 || sudo apt-get install -y chromium-browser >/dev/null 2>&1 || warn "chromium 装失败，md2pdf 不可用"
+# CJK + emoji 字体：无头 chromium 渲染中文 PDF（md2pdf）缺字体会全显方块（□）。桌面发行版通常自带，
+# 但最小化 / 无桌面服务器没有 → 显式装；装完 fc-cache 重建缓存，否则已跑的 chromium 仍看不到新字体。
+sudo apt-get install -y fonts-noto-cjk fonts-noto-color-emoji >/dev/null 2>&1 || warn "CJK 字体装失败，中文 PDF 可能显示方块"
+fc-cache -f >/dev/null 2>&1 || true
 for b in pandoc tesseract chromium; do command -v "$b" >/dev/null 2>&1 && ok "$b: $(command -v "$b")"; done
+[ -n "$(fc-list :lang=zh 2>/dev/null | head -1)" ] && ok "CJK 字体就位（fc-list :lang=zh 有输出）" || warn "未检测到中文字体，中文 PDF 可能方块"
 
 # ---- 5) Python 依赖（用户区，过 PEP668，国内镜像）----
 say "5/10 Python 依赖"
