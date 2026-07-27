@@ -26,6 +26,7 @@ KEYF="$HOME/.config/deepseek/key"
 [ -f "$KEYF" ] && export ANTHROPIC_AUTH_TOKEN="$(tr -d '\r\n' < "$KEYF")"
 [ -z "${ANTHROPIC_AUTH_TOKEN:-}" ] && note "警告:DeepSeek key 缺失($KEYF)——填好后重启服务"
 unset ANTHROPIC_API_KEY
+export PIP_BREAK_SYSTEM_PACKAGES=1   # 让 pip install --user 绕过 PEP668「外部管理」(放开用户级装包)
 export ANTHROPIC_MODEL="deepseek-v4-pro[1m]"
 export ANTHROPIC_DEFAULT_OPUS_MODEL="deepseek-v4-pro[1m]"
 export ANTHROPIC_DEFAULT_SONNET_MODEL="deepseek-v4-pro[1m]"

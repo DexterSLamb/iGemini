@@ -26,6 +26,7 @@ fi
 # 4) 网页服务：默认只绑本机；SERVER_PORT 避开浏览器禁用端口(如 6666)，勿用 <1024(需 root)
 export HOST="${HOST:-127.0.0.1}"
 export SERVER_PORT="${SERVER_PORT:-8888}"
+export PIP_BREAK_SYSTEM_PACKAGES=1   # 让 pip install --user 绕过 PEP668「外部管理」(放开用户级装包)
 
 cd "$CCUI" || { echo "找不到 claudecodeui: $CCUI"; exit 1; }
 echo "后端: ${ANTHROPIC_BASE_URL:-?} | 模型: ${ANTHROPIC_MODEL:-?} | claude: ${CLAUDE_CLI_PATH:-(PATH)}"
