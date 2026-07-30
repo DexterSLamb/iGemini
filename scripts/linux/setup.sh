@@ -189,11 +189,18 @@ if [ "$INSTALLED_CLAUDE_VERSION" != "$CLAUDE_CODE_VERSION" ]; then
   npm i -g "@anthropic-ai/claude-code@$CLAUDE_CODE_VERSION"
 fi
 case "$(uname -m)" in x86_64|amd64) CLAUDE_PLATFORM="linux-x64" ;; *) die "尚未审计该 Linux 架构的 Claude 二进制: $(uname -m)" ;; esac
-CLAUDE_NATIVE_BIN="$(find "$NPM_PREFIX/lib/node_modules/@anthropic-ai" -path '*/claude-code-linux-x64/claude' -type f | head -1)"
-[ -n "$CLAUDE_NATIVE_BIN" ] || die "未找到 Claude Code Linux x64 原生二进制"
+CLAUDE_NATIVE_BIN="$CLAUDE_PACKAGE_ROOT/bin/claude.exe"
+[ -x "$CLAUDE_NATIVE_BIN" ] || die "未找到 Claude Code Linux x64 原生二进制"
 node "$CLAUDE_VERIFIER" --package-root "$CLAUDE_PACKAGE_ROOT" --binary "$CLAUDE_NATIVE_BIN" --platform "$CLAUDE_PLATFORM" \
   --require-binary-sha256 \
   || die "Claude Code 固定版本/哈希校验失败"
+CLAUDE_PLATFORM_PACKAGE="$NPM_PREFIX/lib/node_modules/@anthropic-ai/claude-code-linux-x64"
+if [ -x "$CLAUDE_PLATFORM_PACKAGE/claude" ]; then
+  # npm 的平台包只是通用包原生入口的逐字节副本；核对后只保留已验证的固定哈希入口。
+  cmp -s "$CLAUDE_NATIVE_BIN" "$CLAUDE_PLATFORM_PACKAGE/claude" \
+    || die "Claude npm 通用包与 Linux x64 平台二进制不一致"
+  rm -rf "$CLAUDE_PLATFORM_PACKAGE"
+fi
 ok "claude $($NPM_PREFIX/bin/claude --version 2>/dev/null | head -1)（版本+SHA-256 已固定）"
 
 # ---- 4) 系统能力工具（apt）----

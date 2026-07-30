@@ -31,6 +31,7 @@ PRODUCT_SYSTEM_PROMPT="$REPO/scripts/common/igemini-system-prompt.md"
 SHELL_IDENTITY_PATCH="$REPO/scripts/common/patch-cloudcli-shell-identity.py"
 SINGLE_PROVIDER_PATCH="$REPO/scripts/common/patch-cloudcli-single-provider.py"
 RUNTIME_PRUNER="$REPO/scripts/common/prune-cloudcli-runtime.mjs"
+PYTHON_RUNTIME_PRUNER="$REPO/scripts/common/prune-python-runtime.py"
 # 构建工作目录放无空格路径（node-gyp 源码编译遇路径空格会失败；本仓在 "Claude Code/" 下有空格）
 WORK="${IGBUILD_WORK:-/tmp/igbuild}/$ARCH"
 CACHE="$WORK/cache"; STAGE="$WORK/staging"; PKGROOT="$WORK/pkgroot"; OUT="$HERE/out"
@@ -47,21 +48,20 @@ say(){ printf '\n\033[1;36m== %s ==\033[0m\n' "$*"; }
 ok(){  printf '  \033[0;32m✓\033[0m %s\n' "$*"; }
 die(){ printf '  \033[0;31m✗ %s\033[0m\n' "$*"; exit 1; }
 arch_of(){ file "$1" 2>/dev/null | grep -oE 'arm64|x86_64' | head -1; }
-# 从 GitHub 下载：先让系统网络自行路由（可命中 Clash TUN），再用显式 7897 兜底，
+# 从 GitHub 下载：显式提供 PROXY 时优先走代理；否则走系统网络，
 # 最后尝试公共镜像。下载只写 .part，完成后原子改名。
 GHMIRRORS=( "https://ghfast.top/" "https://gh-proxy.com/" "https://github.moeyy.xyz/" "https://ghproxy.net/" )
 dlgh(){  # $1=github完整URL  $2=目标文件
   local url="$1" dest="$2" part="${2}.part" m
-  if curl --connect-timeout 20 -m 1800 -fsSL -C - --retry 2 --retry-all-errors --retry-delay 2 \
-      --http1.1 -o "$part" "$url" 2>/dev/null \
-      && [ -s "$part" ]; then
-    mv "$part" "$dest"; echo "    (via 系统网络)"; return 0
-  fi
   if [ -n "$PX" ]; then
     curl --connect-timeout 30 -m 1800 -fsSL -C - --retry 2 --retry-all-errors --retry-delay 2 \
       --http1.1 -x "$PX" -o "$part" "$url" 2>/dev/null \
       && [ -s "$part" ] && { mv "$part" "$dest"; echo "    (via 代理直连)"; return 0; }
-    rm -f "$part"
+  fi
+  if curl --connect-timeout 20 -m 1800 -fsSL -C - --retry 2 --retry-all-errors --retry-delay 2 \
+      --http1.1 -o "$part" "$url" 2>/dev/null \
+      && [ -s "$part" ]; then
+    mv "$part" "$dest"; echo "    (via 系统网络)"; return 0
   fi
   rm -f "$part"
   for m in "${GHMIRRORS[@]}"; do
@@ -87,6 +87,7 @@ VER="$MKVER.$(date +%Y%m%d%H%M%S)"   # pkg 内部版本 = 营销版本.秒级时
 [ -f "$SHELL_IDENTITY_PATCH" ] || die "缺 Shell 身份注入补丁: $SHELL_IDENTITY_PATCH"
 [ -f "$SINGLE_PROVIDER_PATCH" ] || die "缺单助手产品补丁: $SINGLE_PROVIDER_PATCH"
 [ -f "$RUNTIME_PRUNER" ] || die "缺 CloudCLI 运行时裁剪器: $RUNTIME_PRUNER"
+[ -f "$PYTHON_RUNTIME_PRUNER" ] || die "缺 Python 运行时裁剪器: $PYTHON_RUNTIME_PRUNER"
 command -v xcrun >/dev/null || die "缺 Xcode CLT(clang)"
 mkdir -p "$CACHE" "$STAGE" "$OUT"
 
@@ -117,7 +118,16 @@ CLAUDE_VERIFY_ARGS=(
   --require-binary-sha256
 )
 node "$CLAUDE_VERIFIER" "${CLAUDE_VERIFY_ARGS[@]}" || die "Claude Code 固定版本/哈希校验失败"
-ok "claude $CLAUDE_CODE_VERSION 二进制 arch=$(arch_of "$CLBIN")（已按审计清单校验）"
+CLAUDE_GENERIC_BIN="$STAGE/claude-pkg/node_modules/@anthropic-ai/claude-code/bin/claude.exe"
+[ -e "$CLAUDE_GENERIC_BIN" ] || die "Claude npm 通用包缺少预期入口"
+CLAUDE_GENERIC_SIZE=$(stat -f '%z' "$CLAUDE_GENERIC_BIN" 2>/dev/null || echo 0)
+rm -f "$CLAUDE_GENERIC_BIN" \
+      "$STAGE/claude-pkg/node_modules/.bin/claude"
+rmdir "$STAGE/claude-pkg/node_modules/@anthropic-ai/claude-code/bin" \
+      "$STAGE/claude-pkg/node_modules/.bin" 2>/dev/null || true
+[ ! -e "$STAGE/claude-pkg/node_modules/@anthropic-ai/claude-code/bin/claude.exe" ] \
+  || die "Claude 重复二进制删除失败"
+ok "claude $CLAUDE_CODE_VERSION 二进制 arch=$(arch_of "$CLBIN")（已按审计清单校验；移除未采用通用入口 ${CLAUDE_GENERIC_SIZE}B）"
 
 BUILD_FINGERPRINT="$(shasum -a 256 "$PATCH" "$REPO/scripts/common/patch-cloudcli-claude-config.py" \
   "$PRODUCT_IDENTITY_PATCH" "$PRODUCT_SYSTEM_PROMPT" "$SHELL_IDENTITY_PATCH" "$SINGLE_PROVIDER_PATCH" \
@@ -207,6 +217,12 @@ rm -rf "$STAGE/python"; mkdir -p "$STAGE/python"; tar -xzf "$CACHE/python.tgz" -
 "$STAGE/python/bin/python3" -m pip install --no-warn-script-location --disable-pip-version-check --only-binary=:all: -i "$PIP_MIRROR" \
   PyMuPDF pdfplumber python-docx openpyxl markdown pandas >/dev/null
 "$STAGE/python/bin/python3" -c "import fitz,pdfplumber,docx,openpyxl,markdown,pandas" || die "python 依赖 import 失败"
+"$STAGE/python/bin/python3" -B "$PYTHON_RUNTIME_PRUNER" --root "$STAGE/python" --platform darwin --arch "$NODE_ARCH" \
+  || die "python 运行时裁剪失败"
+"$STAGE/python/bin/python3" -B -c "import fitz,pdfplumber,docx,openpyxl,markdown,pandas" \
+  || die "python 裁剪后依赖 import 失败"
+"$STAGE/python/bin/python3" -B -c "import fitz,io,pdfplumber;d=fitz.open();p=d.new_page();p.insert_text((72,72),'iGemini runtime probe');b=d.tobytes();d.close();q=pdfplumber.open(io.BytesIO(b));assert len(q.pages)==1 and 'iGemini' in (q.pages[0].extract_text() or '');q.close();print('python-runtime-probe=ok')" \
+  || die "python 裁剪后 PDF 读写能力测试失败"
 ok "python $("$STAGE/python/bin/python3" -V 2>&1)  依赖齐  arch=$(arch_of "$STAGE/python/bin/python3.12" 2>/dev/null || arch_of "$(ls "$STAGE"/python/lib/python3.12/lib-dynload/*.so 2>/dev/null|head -1)")"
 
 # ---- 8) WKWebView 壳（clang -arch；ad-hoc 签名）----
@@ -228,11 +244,13 @@ CURL2=$(curl -m 30 -fsSL --retry 6 --retry-all-errors --retry-delay 3 --http1.1 
   | /usr/bin/python3 -c "import json,sys;d=json.load(sys.stdin);print([x['url'] for x in d['channels']['Stable']['downloads']['chrome-headless-shell'] if x['platform']=='mac-$CHROME_ARCH'][0])")
 [ -f "$CACHE/chs.zip" ] && ! valid_zip "$CACHE/chs.zip" && rm -f "$CACHE/chs.zip"
 if [ ! -f "$CACHE/chs.zip" ]; then
-  # Google Storage 在国内常可直连，显式代理反而可能更慢；直连失败才走 7897。
-  if ! curl --connect-timeout 30 -m 1800 -fsSL -C - --retry 2 --retry-all-errors --retry-delay 3 \
-      --http1.1 -o "$CACHE/chs.zip.part" "$CURL2"; then
+  # 显式提供 PROXY 时优先走代理；当前网络直连可能不报错但只有几十 KiB/s。
+  if [ -n "$PX" ]; then
     curl --connect-timeout 30 -m 1800 -fsSL -C - --retry 6 --retry-all-errors --retry-delay 3 \
-      --http1.1 ${PX:+-x "$PX"} -o "$CACHE/chs.zip.part" "$CURL2"
+      --http1.1 -x "$PX" -o "$CACHE/chs.zip.part" "$CURL2"
+  else
+    curl --connect-timeout 30 -m 1800 -fsSL -C - --retry 6 --retry-all-errors --retry-delay 3 \
+      --http1.1 -o "$CACHE/chs.zip.part" "$CURL2"
   fi
   mv "$CACHE/chs.zip.part" "$CACHE/chs.zip"
 fi
@@ -250,9 +268,12 @@ cp "$CLAUDE_SANITIZER" "$STAGE/sanitize-claude-state.mjs"; chmod +x "$STAGE/sani
 cp "$PRODUCT_SYSTEM_PROMPT" "$STAGE/igemini-system-prompt.md"
 cp "$HERE/src/CLAUDE.md" "$STAGE/CLAUDE.md"
 cp "$HERE/src/com.igemini.web.plist" "$STAGE/com.igemini.web.plist"
-rm -rf "$STAGE/runtime/node/include" "$STAGE/runtime/node/lib/node_modules/npm" "$STAGE/runtime/node/lib/node_modules/corepack" \
-       "$STAGE/runtime/node/bin/npm" "$STAGE/runtime/node/bin/npx" "$STAGE/runtime/node/bin/corepack" "$STAGE/runtime/node/share" 2>/dev/null || true
-ok "工具/启动器就位，node 瘦身"
+rm -rf "$STAGE/runtime/node/include" "$STAGE/runtime/node/lib/node_modules/corepack" \
+       "$STAGE/runtime/node/bin/corepack" "$STAGE/runtime/node/share" \
+       "$STAGE/runtime/node/CHANGELOG.md" "$STAGE/runtime/node/README.md" 2>/dev/null || true
+"$STAGE/runtime/node/bin/npm" --version >/dev/null || die "node 裁剪后 npm 冒烟测试失败"
+"$STAGE/runtime/node/bin/npx" --version >/dev/null || die "node 裁剪后 npx 冒烟测试失败"
+ok "工具/启动器就位，node 瘦身（保留插件与 TaskMaster 所需 npm/npx）"
 
 # ---- 10.5) 法务件（AGPL 合规）----
 # claudecodeui(siteboon) 是 AGPL-3.0，我们改了它（白标 patch）→ 分发这个二进制包时，

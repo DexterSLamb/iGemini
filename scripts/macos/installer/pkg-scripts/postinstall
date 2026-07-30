@@ -3,6 +3,18 @@
 # 路线1（全局到底）：runtime/app/LaunchAgent 三者都全局；key 与 ~/.claude-igemini 天然 per-user（各用户各自）。
 IG="/Applications/iGemini"
 APP="/Applications/iGemini.app"
+# 1.3.2 早期包曾同时携带两份逐字节相同的 Claude 原生二进制。当前运行时始终
+# 使用平台包内的 claude；精确清理升级后可能残留的通用包副本，避免白占约 245 MiB。
+CLAUDE_PLATFORM_READY=0
+for CLAUDE_PLATFORM_BIN in "$IG"/claude-pkg/node_modules/@anthropic-ai/claude-code-darwin-*/claude; do
+  [ -x "$CLAUDE_PLATFORM_BIN" ] && { CLAUDE_PLATFORM_READY=1; break; }
+done
+if [ "$CLAUDE_PLATFORM_READY" -eq 1 ]; then
+  /bin/rm -f "$IG/claude-pkg/node_modules/@anthropic-ai/claude-code/bin/claude.exe" \
+             "$IG/claude-pkg/node_modules/.bin/claude" 2>/dev/null || true
+  /bin/rmdir "$IG/claude-pkg/node_modules/@anthropic-ai/claude-code/bin" \
+               "$IG/claude-pkg/node_modules/.bin" 2>/dev/null || true
+fi
 # 1) 清 quarantine（打包二进制下载来的，否则 Gatekeeper 拦）
 /usr/bin/xattr -dr com.apple.quarantine "$IG" "$APP" 2>/dev/null || true
 # 2) ad-hoc 重签壳（保险，AS 要求签名）

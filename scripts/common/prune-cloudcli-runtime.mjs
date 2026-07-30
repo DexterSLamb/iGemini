@@ -63,9 +63,22 @@ const FORBIDDEN_PACKAGE = [
 
 const STRIP_ROOT_ENTRIES = [
   '.git', '.github', '.husky', 'electron', 'public', 'server', 'src', 'tests', 'test',
+  '.env.example', '.gitignore', '.gitmodules', '.npmignore', '.nvmrc', '.release-it.json',
+  'CHANGELOG.md', 'CONTRIBUTING.md',
+  'README.md', 'README.de.md', 'README.ja.md', 'README.ko.md', 'README.ru.md',
+  'README.tr.md', 'README.zh-CN.md', 'README.zh-TW.md',
+  'commitlint.config.js', 'docker', 'docs', 'index.html', 'plugins', 'redirect-package',
+  'release.sh', 'scripts', 'shared',
   'eslint.config.js', 'postcss.config.js', 'tailwind.config.js', 'tsconfig.json',
   'tsconfig.node.json', 'vite.config.js', 'vitest.config.js',
 ];
+
+const STRIP_DIST_ENTRIES = [
+  // Vite copies these upstream documentation/build-helper files from public/.
+  // The compiled application has no references to them.
+  'screenshots', 'convert-icons.md', 'generate-icons.js',
+];
+const DEPENDENCY_TEST_DIRECTORY_NAMES = new Set(['test', 'tests', '__tests__']);
 
 const BUILTIN_MODULES = new Set(builtinModules.flatMap((name) => [name, `node:${name}`]));
 
@@ -257,11 +270,100 @@ function stripBuildSource(root, dryRun) {
   for (const entry of STRIP_ROOT_ENTRIES) {
     rmSync(path.join(root, entry), { recursive: true, force: true });
   }
+  for (const entry of STRIP_DIST_ENTRIES) {
+    rmSync(path.join(root, 'dist', entry), { recursive: true, force: true });
+  }
   for (const entry of readdirSync(root)) {
     if (/^(?:.*\.)?(?:test|spec)\.[cm]?[jt]sx?$/.test(entry)) {
       rmSync(path.join(root, entry), { recursive: true, force: true });
     }
   }
+  rmSync(path.join(root, 'node_modules', '.vite-temp'), { recursive: true, force: true });
+}
+
+function stripDependencyDevelopmentArtifacts(root, dryRun) {
+  const nodeModules = path.join(root, 'node_modules');
+  const removed = [];
+
+  function visit(directory) {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const full = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        if (DEPENDENCY_TEST_DIRECTORY_NAMES.has(entry.name)) {
+          removed.push(path.relative(nodeModules, full));
+          if (!dryRun) rmSync(full, { recursive: true, force: true });
+        } else {
+          visit(full);
+        }
+      } else if (
+        entry.isFile()
+        && (entry.name.endsWith('.map') || /(?:^|\.)(?:test|spec)\.[cm]?[jt]sx?$/.test(entry.name))
+      ) {
+        removed.push(path.relative(nodeModules, full));
+        if (!dryRun) rmSync(full, { force: true });
+      }
+    }
+  }
+
+  visit(nodeModules);
+  if (!dryRun) {
+    const remaining = [];
+    visitForVerification(nodeModules, remaining);
+    if (remaining.length) {
+      fail(`dependency test/source-map payload remains: ${remaining.slice(0, 20).join(', ')}`);
+    }
+  }
+  return removed.length;
+}
+
+function visitForVerification(directory, remaining) {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const full = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      if (DEPENDENCY_TEST_DIRECTORY_NAMES.has(entry.name)) remaining.push(full);
+      else visitForVerification(full, remaining);
+    } else if (
+      entry.isFile()
+      && (entry.name.endsWith('.map') || /(?:^|\.)(?:test|spec)\.[cm]?[jt]sx?$/.test(entry.name))
+    ) {
+      remaining.push(full);
+    }
+  }
+}
+
+function removeEmptyDirectories(root) {
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const full = path.join(root, entry.name);
+    removeEmptyDirectories(full);
+    if (readdirSync(full).length === 0) rmSync(full, { recursive: true, force: true });
+  }
+}
+
+function stripCompiledServerArtifacts(root, dryRun) {
+  const distServer = path.join(root, 'dist-server');
+  const artifacts = [];
+  walkFiles(distServer, (file) => {
+    const relative = path.relative(distServer, file);
+    const segments = relative.split(path.sep);
+    const inTestDirectory = segments.slice(0, -1).some((segment) => segment === 'test' || segment === 'tests');
+    const isTestFile = /(?:^|\.)(?:test|spec)\.[cm]?js$/.test(path.basename(file));
+    if (inTestDirectory || isTestFile || file.endsWith('.map')) artifacts.push(file);
+  });
+  if (!dryRun) {
+    for (const file of artifacts) rmSync(file, { force: true });
+    removeEmptyDirectories(distServer);
+    const remaining = [];
+    walkFiles(distServer, (file) => {
+      const relative = path.relative(distServer, file);
+      const segments = relative.split(path.sep);
+      const inTestDirectory = segments.slice(0, -1).some((segment) => segment === 'test' || segment === 'tests');
+      const isTestFile = /(?:^|\.)(?:test|spec)\.[cm]?js$/.test(path.basename(file));
+      if (inTestDirectory || isTestFile || file.endsWith('.map')) remaining.push(relative);
+    });
+    if (remaining.length) fail(`compiled test/source-map payload remains: ${remaining.slice(0, 20).join(', ')}`);
+  }
+  return artifacts.length;
 }
 
 function nativeKind(file) {
@@ -339,6 +441,8 @@ function main() {
   const removed = removeUnkeptPackages(root, lock, keep, dryRun);
   trimNativePackages(root, platform, arch, dryRun);
   stripBuildSource(root, dryRun);
+  const removedDependencyArtifactCount = stripDependencyDevelopmentArtifacts(root, dryRun);
+  const removedCompiledArtifactCount = stripCompiledServerArtifacts(root, dryRun);
 
   let nativeFiles = [];
   if (!dryRun) {
@@ -363,6 +467,8 @@ function main() {
     retainedRoots: RUNTIME_ROOTS,
     retainedPackageCount: keep.size,
     removedPackageCount: removed.length,
+    removedDependencyArtifactCount,
+    removedCompiledArtifactCount,
     nativeFiles: nativeFiles.map((entry) => ({
       path: path.relative(root, entry.file).split(path.sep).join('/'),
       format: entry.format,

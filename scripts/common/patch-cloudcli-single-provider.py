@@ -73,6 +73,12 @@ def patch_product_surface(root: Path) -> None:
 
     github_repo = "https://github.com/DexterSLamb/iGemini"
 
+    replace_once(
+        root / "server/services/vapid-keys.js",
+        "mailto:noreply@claudecodeui.local",
+        "mailto:noreply@igemini.local",
+    )
+
     version_hook = root / "src/hooks/useVersionCheck.ts"
     replace_once(
         version_hook,
@@ -903,6 +909,23 @@ def main() -> None:
     system_font_stack = (
         "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, "
         "\"Helvetica Neue\", Arial, sans-serif"
+    )
+    replace_once(
+        root / "tailwind.config.js",
+        '''  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+''',
+        '''  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  // CloudCLI's source contains JavaScript negation such as `!user`. Tailwind
+  // otherwise misreads it as an important variant of the custom `.user`
+  // component and emits malformed duplicate CSS during production builds.
+  blocklist: ['!user'],
+''',
     )
     replace_once(
         root / "src/index.css",

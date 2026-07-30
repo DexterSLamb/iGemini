@@ -40,6 +40,7 @@ $ProductSystemPrompt = Join-Path $RepoRoot 'scripts\common\igemini-system-prompt
 $ShellIdentityPatch = Join-Path $RepoRoot 'scripts\common\patch-cloudcli-shell-identity.py'
 $SingleProviderPatch = Join-Path $RepoRoot 'scripts\common\patch-cloudcli-single-provider.py'
 $RuntimePruner = Join-Path $RepoRoot 'scripts\common\prune-cloudcli-runtime.mjs'
+$PythonRuntimePruner = Join-Path $RepoRoot 'scripts\common\prune-python-runtime.py'
 $Patch     = Join-Path $RepoRoot 'vendor\igemini-claudecodeui.patch'
 $IconPng   = Join-Path $RepoRoot 'assets\igemini-icon.png'
 $ToolsSrc  = Join-Path $RepoRoot 'scripts\windows\tools'
@@ -49,7 +50,7 @@ $Stage     = Join-Path $Installer 'staging'    # 产物（每次重建，已 git
 
 foreach($required in @(
   $ClaudeVerifier, $ProductIdentityPatch, $ProductSystemPrompt,
-  $ShellIdentityPatch, $SingleProviderPatch, $RuntimePruner,
+  $ShellIdentityPatch, $SingleProviderPatch, $RuntimePruner, $PythonRuntimePruner,
   $Patch, $IconPng, $ToolsSrc, $ClaudeMd
 )) {
   if(-not (Test-Path $required)){ throw "缺少必需构建输入: $required" }
@@ -121,6 +122,12 @@ Native { & $PyExe @pipArgs } 'pip install wheels'
 # 【不用 Native】——它合并 stderr 不按退出码中止；这里要【硬中止】，否则 pandas 等 pip 网络失败会静默产出残缺包。
 & $PyExe -c "import fitz, pdfplumber, docx, openpyxl, markdown, pandas; print('py-deps OK')"
 if($LASTEXITCODE -ne 0){ throw 'python 依赖 import 失败（pandas/numpy 等可能因 pip 网络失败未装上）—— 终止构建，避免产出不含 pandas 的残缺安装包' }
+& $PyExe -B $PythonRuntimePruner --root $PyDir --platform win32 --arch x64
+if($LASTEXITCODE -ne 0){ throw 'Python 运行时裁剪失败' }
+& $PyExe -B -c "import fitz, pdfplumber, docx, openpyxl, markdown, pandas; print('py-deps after prune OK')"
+if($LASTEXITCODE -ne 0){ throw 'Python 裁剪后依赖 import 失败' }
+& $PyExe -B -c "import fitz,io,pdfplumber;d=fitz.open();p=d.new_page();p.insert_text((72,72),'iGemini runtime probe');b=d.tobytes();d.close();q=pdfplumber.open(io.BytesIO(b));assert len(q.pages)==1 and 'iGemini' in (q.pages[0].extract_text() or '');q.close();print('python-runtime-probe=ok')"
+if($LASTEXITCODE -ne 0){ throw 'Python 裁剪后 PDF 读写能力测试失败' }
 
 # ---------------------------------------------------------------------------
 # 3) pandoc.exe（md2docx 核心依赖 + parsedoc 的 rtf/odt）
@@ -226,6 +233,18 @@ Get-ChildItem $pkg -File | Where-Object { $_.Name -match '\.(cjs|d\.ts|json|md)$
   ForEach-Object { Copy-Item $_.FullName (Join-Path $Stage 'claude') -Force }
 # 冒烟测试：去重后的单份 claude.exe 必须能独立跑（自带 node 的 SEA，理应不依赖被删的那份）。挂了立刻 throw，别等装到目标机才发现
 Native { & (Join-Path $Stage 'claude\bin\claude.exe') --version } '去重后 claude.exe 冒烟测试'
+
+# CloudCLI 运行时的插件安装与 TaskMaster 会调用 npm/npx，因此必须随自带 Node 保留；
+# corepack、Node 开发辅助批处理和文档不参与运行。
+foreach($entry in @(
+  'node_modules\corepack','corepack','corepack.cmd','corepack.ps1',
+  'install_tools.bat','nodevars.bat','CHANGELOG.md','README.md'
+)) {
+  Remove-Item (Join-Path $Stage "runtime\node\$entry") -Recurse -Force -ErrorAction SilentlyContinue
+}
+Native { & $NodeExe --version } '裁剪后 node.exe 冒烟测试'
+Native { & (Join-Path $Stage 'runtime\node\npm.cmd') --version } '裁剪后 npm 冒烟测试'
+Native { & (Join-Path $Stage 'runtime\node\npx.cmd') --version } '裁剪后 npx 冒烟测试'
 
 # ---------------------------------------------------------------------------
 # 6) 能力工具：5 个 .py + 生成调用包装 .cmd（指向【自带】python，放 PATH 即可 `parsedoc x.pdf`）
