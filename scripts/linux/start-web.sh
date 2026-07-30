@@ -11,8 +11,8 @@ export PATH="$HOME/.npm-global/bin:$APP/tools:$HOME/.local/bin:$PATH"
 
 # ---- DeepSeek 后端(key 从 ~/.config/deepseek/key 读)----
 # base 地址【可配置】:~/.config/deepseek/base 存在则用它,否则缺省 DeepSeek 官方。
-# 为将来「切换后端」留位——届时只改这个文件(地址指向新端点),
-# 代码一行不动。与 macOS start-web.sh / Windows run-server.ps1 一致。
+# 为将来切换后端留位——届时只改这个文件（地址指向新端点），
+# 代码一行不动；与 macOS start-web.sh / Windows run-server.ps1 一致。
 BASEF="$HOME/.config/deepseek/base"
 if [ -s "$BASEF" ]; then
   export ANTHROPIC_BASE_URL="$(tr -d '\r\n' < "$BASEF")"
@@ -31,12 +31,23 @@ export ANTHROPIC_DEFAULT_HAIKU_MODEL="deepseek-v4-flash"
 export CLAUDE_CODE_SUBAGENT_MODEL="deepseek-v4-flash"
 export CLAUDE_CODE_EFFORT_LEVEL="max"
 export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+export DISABLE_GROWTHBOOK=1
+export DISABLE_TELEMETRY=1
+export DISABLE_ERROR_REPORTING=1
 export DISABLE_INSTALLATION_CHECKS=1
 export DISABLE_AUTOUPDATER=1
+export DISABLE_UPDATES=1
+export CLAUDE_CODE_ATTRIBUTION_HEADER=0
 
 # ---- claude 引擎路径 + 【隔离配置目录】(与日常官方 claude 井水不犯河水)----
 export CLAUDE_CLI_PATH="$HOME/.npm-global/bin/claude"
 export CLAUDE_CONFIG_DIR="$HOME/.claude-igemini"
+export IGEMINI_SYSTEM_PROMPT_FILE="$APP/igemini-system-prompt.md"
+[ -s "$IGEMINI_SYSTEM_PROMPT_FILE" ] || { note "致命:iGemini 产品身份 prompt 缺失($IGEMINI_SYSTEM_PROMPT_FILE)"; exit 78; }
+SANITIZER="$APP/sanitize-claude-state.mjs"
+[ -f "$SANITIZER" ] || { note "致命:安全清理器缺失($SANITIZER)"; exit 78; }
+SANITIZE_RESULT="$(node "$SANITIZER" "$CLAUDE_CONFIG_DIR" 2>>"$LOG")" || { note "致命:Claude 状态安全清理失败"; exit 78; }
+note "Claude 状态安全检查:$SANITIZE_RESULT"
 
 # ---- 只绑本机;端口 8888 ----
 export HOST="127.0.0.1"

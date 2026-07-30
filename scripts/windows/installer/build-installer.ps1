@@ -15,12 +15,12 @@
 # ============================================================================
 param(
   [string]$Proxy        = $env:HTTPS_PROXY,
-  [string]$NodeVersion  = 'v24.17.0',     # 便携 node；构建用同一个 node 做 npm ci/build → 原生模块 ABI 自洽（与 实测可用版本一致）
+  [string]$NodeVersion  = 'v24.17.0',     # 便携 node；构建用同一个 node 做 npm ci/build → 原生模块 ABI 自洽（与实测可用版本一致）
   [string]$PyVersion    = '3.12.7',       # 嵌入式 Python
-  [string]$PandocVersion= '3.10',         # 与 实测一致
-  [string]$Commit       = '4712431be81718dfb559ef43d7d7d5315bf4e01a',  # claudecodeui 上游基线（勿改，patch 基于它）
+  [string]$PandocVersion= '3.10',         # 与实测一致
+  [string]$Commit       = '27eaf0146a46aa8a55178f3d394360ff7465420f',  # CloudCLI v1.36.3 tag 解引用后的 commit（patch 基线）
   [string]$UpstreamUrl  = 'https://github.com/siteboon/claudecodeui',
-  [string]$PyIndex      = 'https://pypi.tuna.tsinghua.edu.cn/simple',   # pip 主索引；CI/海外传 https://pypi.org/simple
+  [string]$PyIndex      = 'https://pypi.tuna.tsinghua.edu.cn/simple',   # CI/海外传 https://pypi.org/simple
   [switch]$SkipDownloads                  # 调试：复用已下好的零件
 )
 $ErrorActionPreference = 'Stop'
@@ -33,12 +33,27 @@ if ($Proxy) {
 $Installer = $PSScriptRoot
 $RepoRoot  = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 $Version   = (Get-Content (Join-Path $Installer 'VERSION') -Raw).Trim()   # 用户可见版本单一真源 → 进包名 / AppVersion / exe 文件属性 / 壳关于
+$ClaudeCodeVersion = (Get-Content (Join-Path $RepoRoot 'scripts\common\CLAUDE_CODE_VERSION') -Raw).Trim()
+$ClaudeVerifier = Join-Path $RepoRoot 'scripts\common\verify-claude-code.mjs'
+$ProductIdentityPatch = Join-Path $RepoRoot 'scripts\common\patch-cloudcli-product-identity.py'
+$ProductSystemPrompt = Join-Path $RepoRoot 'scripts\common\igemini-system-prompt.md'
+$ShellIdentityPatch = Join-Path $RepoRoot 'scripts\common\patch-cloudcli-shell-identity.py'
+$SingleProviderPatch = Join-Path $RepoRoot 'scripts\common\patch-cloudcli-single-provider.py'
+$RuntimePruner = Join-Path $RepoRoot 'scripts\common\prune-cloudcli-runtime.mjs'
 $Patch     = Join-Path $RepoRoot 'vendor\igemini-claudecodeui.patch'
 $IconPng   = Join-Path $RepoRoot 'assets\igemini-icon.png'
 $ToolsSrc  = Join-Path $RepoRoot 'scripts\windows\tools'
 $ClaudeMd  = Join-Path $RepoRoot 'scripts\windows\deployed-claude-md.md'   # Windows 专属，不用 mac/共享的 config\ 那份（OS 隔离）
 $Cache     = Join-Path $Installer 'cache'      # 下载缓存（可复用，已 gitignore）
 $Stage     = Join-Path $Installer 'staging'    # 产物（每次重建，已 gitignore）
+
+foreach($required in @(
+  $ClaudeVerifier, $ProductIdentityPatch, $ProductSystemPrompt,
+  $ShellIdentityPatch, $SingleProviderPatch, $RuntimePruner,
+  $Patch, $IconPng, $ToolsSrc, $ClaudeMd
+)) {
+  if(-not (Test-Path $required)){ throw "缺少必需构建输入: $required" }
+}
 
 function Say($m){ Write-Host "==> $m" -ForegroundColor Cyan }
 # 下到 .part 再 rename：断网留下的半截文件不会被下次误当成「已下好」；-UseBasicParsing 免 PS5.1 加载 IE DOM
@@ -99,7 +114,7 @@ if(-not $SkipDownloads){ Get-File 'https://bootstrap.pypa.io/get-pip.py' $getpip
 Native { & $PyExe $getpip --no-warn-script-location } 'get-pip'
 $pipArgs = @('-m','pip','install','--no-warn-script-location','--no-compile','--retries','5','--timeout','60')
 if($Proxy){ $pipArgs += @('--proxy',$Proxy) }
-# -i 主索引（默认清华更快；CI/海外用 -PyIndex https://pypi.org/simple）；pymupdf 带自己的 mupdf dll 在 wheel 里
+# -i 主索引（默认清华更快；CI/海外用 -PyIndex https://pypi.org/simple）；pymupdf 的 mupdf dll 在 wheel 里
 $pipArgs += @('-i',$PyIndex,'--extra-index-url','https://pypi.org/simple','pymupdf','pdfplumber','python-docx','openpyxl','markdown','pandas')
 Native { & $PyExe @pipArgs } 'pip install wheels'
 # 干净机确认 import 全过（fitz 原生 dll、pdfplumber 依赖的 Pillow/cffi、pandas/numpy）。
@@ -124,6 +139,8 @@ $ccBuild = Join-Path $Cache 'claudecodeui'
 if(Test-Path $ccBuild){ Remove-Item $ccBuild -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $ccBuild | Out-Null
 $env:Path = "$(Split-Path $NodeExe);$env:Path"   # 让 npm/git 调到便携 node
+$electronSkipBefore = $env:ELECTRON_SKIP_BINARY_DOWNLOAD
+$iGeminiVersionBefore = $env:VITE_IGEMINI_VERSION
 Push-Location $ccBuild
 try {
   Native { git init -q } 'git init'
@@ -131,18 +148,28 @@ try {
   Native { git fetch --depth 1 origin $Commit -q } 'git fetch'
   Native { git checkout -q FETCH_HEAD } 'git checkout'
   Native { git apply --binary --check $Patch } 'git apply --check'   # dry-run：patch 冲突/空/格式错立刻暴露
-  Native { git apply --binary $Patch } 'git apply'                   # 81 文件白标；冲突即上游漂移 → 见 vendor/README.md
-  # [iGemini] 会话发现认 CLAUDE_CONFIG_DIR（改 .ts 源，须在 build 前）：隔离后 claudecodeui 默认读 ~/.claude 取不到会话名 → 侧栏全 New Session。
-  $syncTs = Join-Path $ccBuild 'server\modules\providers\list\claude\claude-session-synchronizer.provider.ts'
-  if(Test-Path $syncTs){ $t=[IO.File]::ReadAllText($syncTs); $o="path.join(os.homedir(), '.claude')"; $n="(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'))"
-    if($t.Contains($o)){ [IO.File]::WriteAllText($syncTs, $t.Replace($o,$n)); Say 'synchronizer.ts → CLAUDE_CONFIG_DIR' } else { Write-Host 'WARN: synchronizer.ts 锚点没找到' -ForegroundColor Yellow } }
-  $watchTs = Join-Path $ccBuild 'server\modules\providers\services\sessions-watcher.service.ts'
-  if(Test-Path $watchTs){ $t=[IO.File]::ReadAllText($watchTs); $o="path.join(os.homedir(), '.claude', 'projects')"; $n="path.join(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'), 'projects')"
-    if($t.Contains($o)){ [IO.File]::WriteAllText($watchTs, $t.Replace($o,$n)); Say 'watcher.ts → CLAUDE_CONFIG_DIR' } else { Write-Host 'WARN: watcher.ts 锚点没找到' -ForegroundColor Yellow } }
+  Native { git apply --binary $Patch } 'git apply'                   # 94 文件白标；冲突即上游漂移 → 见 vendor/README.md
+  # iGemini 隔离补丁（不进共享白标 patch）：覆盖 session/auth/skills/MCP/agent 等直接读盘路径。
+  & $PyExe (Join-Path $RepoRoot 'scripts\common\patch-cloudcli-claude-config.py') $ccBuild
+  if($LASTEXITCODE -ne 0){ throw 'CLAUDE_CONFIG_DIR 源码补丁失败' }
+  & $PyExe $ProductIdentityPatch $ccBuild
+  if($LASTEXITCODE -ne 0){ throw 'iGemini 原生产品身份补丁失败' }
+  & $PyExe $ShellIdentityPatch $ccBuild
+  if($LASTEXITCODE -ne 0){ throw 'iGemini Shell 原生产品身份补丁失败' }
+  & $PyExe $SingleProviderPatch $ccBuild
+  if($LASTEXITCODE -ne 0){ throw 'iGemini 单助手产品补丁失败' }
+  $env:ELECTRON_SKIP_BINARY_DOWNLOAD = '1'                            # WebView2 壳不用 Electron 二进制
+  $env:VITE_IGEMINI_VERSION = $Version                               # 网页关于/更新提示使用 iGemini 产品版本
   Native { & $NpmCmd ci } 'npm ci'                                   # 严格按 lockfile，比 npm install 可靠
   Native { & $NpmCmd run build } 'npm run build'                    # 出 dist\ + dist-server\
   Native { & $NpmCmd prune --production } 'npm prune'               # 砍掉 devDependencies（646MB→~200MB）
-} finally { Pop-Location }                # 任一步挂掉也把工作目录弹回来，别污染交互 shell
+} finally {
+  if($null -eq $electronSkipBefore){ Remove-Item Env:\ELECTRON_SKIP_BINARY_DOWNLOAD -ErrorAction SilentlyContinue }
+  else { $env:ELECTRON_SKIP_BINARY_DOWNLOAD = $electronSkipBefore }
+  if($null -eq $iGeminiVersionBefore){ Remove-Item Env:\VITE_IGEMINI_VERSION -ErrorAction SilentlyContinue }
+  else { $env:VITE_IGEMINI_VERSION = $iGeminiVersionBefore }
+  Pop-Location
+}                                         # 任一步挂掉也恢复环境和工作目录
 # [iGemini · Windows 专属] 强制 bypassPermissions：CC 在网页里要跑 bash 命令时不再被权限拦（= --dangerously-skip-permissions）。
 # ⚠️ 只在 Windows 出厂构建里改【编译产物 dist-server】，绝不进共享白标 patch、不碰 mac —— OS 隔离。
 $sdk = Join-Path $ccBuild 'dist-server\server\claude-sdk.js'
@@ -153,20 +180,15 @@ if(Test-Path $sdk){
   if($sdkTxt.Contains($sdkOld)){ [IO.File]::WriteAllText($sdk, $sdkTxt.Replace($sdkOld,$sdkNew)); Say 'claude-sdk.js → 强制 bypass(仅Win)' }
   else { Write-Host 'WARN: claude-sdk.js 的 skipPermissions 模式没找到（上游可能变了），跳过 patch' -ForegroundColor Yellow }
 }
-# [iGemini · Windows 专属] Shell 终端也免权限：Chat(claude-sdk)已 bypass，但 claudecodeui 的 Shell 集成
-# 终端走 buildShellCommand 直接拼 `claude --resume`、没带 --dangerously-skip-permissions → Shell 里 claude
-# 不停问权限（与 mac 同一漏网，全库审计确认 claude 仅经 SDK 与此 pty-shell 两路，故只需改这 3 条命令）。
+# Shell 终端在源码构建阶段已统一改为 Claude CLI 原生 prompt-file + bypass。
+# 这里 fail closed，避免未来上游漂移后悄悄产出身份缺失的安装包。
 $shellsvc = Join-Path $ccBuild 'dist-server\server\modules\websocket\services\shell-websocket.service.js'
-if(Test-Path $shellsvc){
-  $svc = [IO.File]::ReadAllText($shellsvc)
-  if(-not $svc.Contains('[iGemini] shell bypass')){
-    $svc = $svc.Replace('const command = initialCommand || ''claude'';', 'const command = initialCommand || ''claude --dangerously-skip-permissions'';')
-    $svc = $svc.Replace('claude --resume "${resumeSessionId}"; if ($LASTEXITCODE -ne 0) { claude }', 'claude --dangerously-skip-permissions --resume "${resumeSessionId}"; if ($LASTEXITCODE -ne 0) { claude --dangerously-skip-permissions }')
-    $svc = $svc.Replace('claude --resume "${resumeSessionId}" || claude', 'claude --dangerously-skip-permissions --resume "${resumeSessionId}" || claude --dangerously-skip-permissions')
-    $svc = $svc.Replace('function buildShellCommand', "// [iGemini] shell bypass`r`nfunction buildShellCommand")
-    [IO.File]::WriteAllText($shellsvc, $svc); Say 'shell-websocket.service.js → Shell 终端也免权限(仅Win)'
-  } else { Write-Host 'shell-websocket 已含 shell bypass，跳过' -ForegroundColor DarkGray }
-} else { Write-Host 'WARN: shell-websocket.service.js 没找到，跳过 Shell bypass patch' -ForegroundColor Yellow }
+if(-not (Test-Path $shellsvc)){ throw 'shell-websocket.service.js 没有进入编译产物' }
+$svc = [IO.File]::ReadAllText($shellsvc)
+if(-not $svc.Contains('[iGemini] Claude shell identity + bypass')){
+  throw 'Shell 原生身份/免权限补丁未进入编译产物'
+}
+Say 'Shell → 原生身份 prompt 文件 + bypass 已验证'
 # [iGemini · 三平台通病] JWT 有效期 7d → 3650d：壳只在启动时自动登录一次、不续签，7 天后 token 过期 → 聊天 WS 鉴权失败。
 # 本机 / 固定账号 iGemini/iGemini 场景下长效 token 无实际危害；将来做远程鉴权改造时再收回。
 $authjs = Join-Path $ccBuild 'dist-server\server\middleware\auth.js'
@@ -176,16 +198,12 @@ if(Test-Path $authjs){
   elseif($authTxt.Contains("expiresIn: '3650d'")){ Write-Host 'auth.js JWT 有效期已改，跳过' -ForegroundColor DarkGray }
   else { Write-Host 'WARN: auth.js 的 expiresIn 7d 没找到（上游可能变了）' -ForegroundColor Yellow }
 }
-# [iGemini] watcher 回归修复（绿点/loading）：会话发现认了 CLAUDE_CONFIG_DIR 后，watcher 对正在跑的会话广播 upsert 会冲掉运行态。
-$watchJs = Join-Path $ccBuild 'dist-server\server\modules\providers\services\sessions-watcher.service.js'
-if(Test-Path $watchJs){
-  $w = [IO.File]::ReadAllText($watchJs)
-  if(-not $w.Contains('isClaudeSDKSessionActive')){
-    $w = $w.Replace("import { generateDisplayName } from '../../../modules/projects/index.js';", "import { generateDisplayName } from '../../../modules/projects/index.js';`r`nimport { isClaudeSDKSessionActive } from '../../../claude-sdk.js';")
-    $w = $w.Replace("for (const updatedSessionId of queuedUpdate.updatedSessionIds) {", "for (const updatedSessionId of queuedUpdate.updatedSessionIds) {`r`n            if (isClaudeSDKSessionActive(updatedSessionId)) { continue; } // [iGemini]")
-    [IO.File]::WriteAllText($watchJs, $w); Say 'sessions-watcher.js → suppress-active(绿点/loading)'
-  } else { Write-Host 'watcher 已含 suppress-active，跳过' -ForegroundColor DarkGray }
-}
+# 只保留编译后服务端真正可达的运行时依赖；Codex/SDK 自带的巨大 native CLI、
+# 前端源码依赖和非目标架构 prebuild 都不得进入 installer。脚本同时加载 DB/auth/PTY/rg/SDK
+# 并解析 PE/.node 架构，任一项不对立即终止 CI。
+Native {
+  & $NodeExe $RuntimePruner --root $ccBuild --platform win32 --arch x64 --runtime-node $NodeExe
+} 'CloudCLI 目标平台运行时裁剪/验证'
 # 搬到 staging。⚠️ 只用【绝对路径】剔顶层 .git —— 绝不能按名字 /XD src，那会把 node_modules 里
 # 各个包自己的 src\ 也一并删掉（web-push 等的入口就在 src\index.js），弄坏运行期依赖 → 服务起不来。
 Mirror $ccBuild (Join-Path $Stage 'claudecodeui') -xd @((Join-Path $ccBuild '.git')) -xf @('*.map')
@@ -198,9 +216,11 @@ Say "[5/7] claude CLI (dedup → single claude.exe)"
 $claudePrefix = Join-Path $Cache 'claude-npm'
 if(Test-Path $claudePrefix){ Remove-Item $claudePrefix -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $claudePrefix | Out-Null
-Native { & $NpmCmd install '@anthropic-ai/claude-code' --prefix $claudePrefix --no-fund --no-audit } 'npm install claude'
+Native { & $NpmCmd install "@anthropic-ai/claude-code@$ClaudeCodeVersion" --prefix $claudePrefix --no-fund --no-audit } 'npm install claude (pinned)'
 $pkg = Join-Path $claudePrefix 'node_modules\@anthropic-ai\claude-code'
-Copy-Item (Join-Path $pkg 'bin\claude.exe') (Join-Path $Stage 'claude\bin\claude.exe') -Force
+$nativeClaude = Join-Path $pkg 'bin\claude.exe'
+Native { & $NodeExe $ClaudeVerifier --package-root $pkg --binary $nativeClaude --platform win32-x64 --require-binary-sha256 } 'Claude 固定版本/哈希校验'
+Copy-Item $nativeClaude (Join-Path $Stage 'claude\bin\claude.exe') -Force
 # 随手把包根的小支撑文件也带上（*.cjs/*.d.ts/package.json/LICENSE，几百 KB），不带那份 214MB 重复二进制
 Get-ChildItem $pkg -File | Where-Object { $_.Name -match '\.(cjs|d\.ts|json|md)$' } |
   ForEach-Object { Copy-Item $_.FullName (Join-Path $Stage 'claude') -Force }
@@ -275,28 +295,31 @@ MakeBmp     (Join-Path $brand 'small.bmp') 138 140
 MakeSidebar (Join-Path $brand 'large.bmp') 492 941
 MakeBmp     (Join-Path $brand 'orb.bmp')   220 220
 Copy-Item (Join-Path $Installer 'run-server.ps1') (Join-Path $Stage 'run-server.ps1') -Force
+Copy-Item (Join-Path $RepoRoot 'scripts\common\sanitize-claude-state.mjs') (Join-Path $Stage 'sanitize-claude-state.mjs') -Force
+Copy-Item $ProductSystemPrompt (Join-Path $Stage 'igemini-system-prompt.md') -Force
 # launcher.vbs：登录启动项用 wscript 跑它 → 以隐藏窗口起 run-server.ps1，根治 powershell -WindowStyle Hidden
 # 藏不住主控制台窗的问题（iGemini.iss 的 [Icons]/[Run] 都指向它）。纯 ASCII，wscript 直接读。
 Copy-Item (Join-Path $Installer 'launcher.vbs') (Join-Path $Stage 'launcher.vbs') -Force
 Copy-Item $ClaudeMd (Join-Path $Stage 'deployed-claude-md.md') -Force
-# 法务：AGPL 要求随二进制提供对应源码 → 带上 patch + 来源说明（大陆访问不了 GitHub，patch 必须随包）
+# 法务：AGPL 要求随二进制提供对应源码获取方式；许可证正文和共享白标 patch 随包携带。
 Copy-Item $Patch (Join-Path $Stage 'legal\igemini-claudecodeui.patch') -Force
 # AGPL 全文：用【仓库内置】的（gnu.org 大陆不可达；URL 占位不满足 AGPL「随附完整许可证正文」要求）
 Copy-Item (Join-Path $Installer 'LICENSE-AGPL-3.0.txt') (Join-Path $Stage 'legal\LICENSE-AGPL-3.0.txt') -Force
 @"
 iGemini 内含第三方开源组件 claudecodeui（作者 siteboon），许可证 AGPL-3.0。
-按 AGPL 要求，随二进制提供对应完整源码的获取方式：
+按 AGPL 要求，随二进制提供修改源码、构建方式和完整对应源码包的获取方式：
 
   上游仓库    : $UpstreamUrl
   基线 commit : $Commit
-  白标改动    : 见同目录 igemini-claudecodeui.patch
-                （克隆上游后 git checkout $Commit，再 git apply --binary <该 patch>，
-                  即可逐字节重建本包内的 claudecodeui）
+  共享白标改动: 见同目录 igemini-claudecodeui.patch
+                 （克隆上游、checkout $Commit 后用 git apply --binary 应用）
+  iGemini 修改与构建源码: https://github.com/DexterSLamb/iGemini/tree/v$Version
+  完整对应源码包         : 同一 GitHub Release 中的
+                           iGemini-Corresponding-Source-v$Version.tar.gz
 
-注：本 Windows 版在出厂构建时另有两处平台特有改动（作用于编译产物 dist-server）：
-    claude-sdk.js 强制 bypass 权限确认；shell-websocket.service.js 让集成终端里的 claude 也免权限。
-    这两处不在上面的共享 patch 内。索取完整对应源码请访问项目主页：
-      https://github.com/DexterSLamb/iGemini
+共享 patch 只重建三平台共用的白标源码改动。对应源码包包含应用全部源码补丁后的
+完整 CloudCLI 源码树，以及上述 release tag 的 iGemini 修改与构建源码。运行其中
+scripts/windows/installer/build-installer.ps1 会应用剩余的构建期改动并组装本安装包。
 
 本目录另含 LICENSE-AGPL-3.0.txt（AGPL-3.0 许可证全文）。
 "@ | Set-Content (Join-Path $Stage 'legal\SOURCE.txt') -Encoding utf8

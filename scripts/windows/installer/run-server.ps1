@@ -19,8 +19,8 @@ $CC      = Join-Path $App 'claudecodeui'
 
 # 1) DeepSeek 环境（key 从 %USERPROFILE%\.config 读，绝不硬编码；与 mac ds.sh 一致）
 # base 地址【可配置】：.config\deepseek\base 存在则用它，否则缺省 DeepSeek 官方。
-# 为未来「切换后端」留位——届时只改这个文件（地址指向新端点），代码不动、包不重出。
-# 与 macOS start-web.sh 一致。
+# 为未来切换后端留位——届时只改这个文件（地址指向新端点），代码不动、包不重出。
+# 与 macOS start-web.sh 使用相同的可配置 base 机制。
 $baseFile = Join-Path $env:USERPROFILE '.config\deepseek\base'
 if (Test-Path $baseFile) {
   $env:ANTHROPIC_BASE_URL = (Get-Content $baseFile -Raw).Trim().TrimStart([char]0xFEFF)
@@ -42,9 +42,19 @@ $env:ANTHROPIC_DEFAULT_SONNET_MODEL = 'deepseek-v4-pro[1m]'
 $env:ANTHROPIC_DEFAULT_HAIKU_MODEL  = 'deepseek-v4-flash'
 # [iGemini] 隔离：iGemini 的 claude 会话/配置写进独立目录，不污染用户日常 Claude Code 的 ~/.claude（与 mac/Linux 一致）。
 $env:CLAUDE_CONFIG_DIR              = Join-Path $env:USERPROFILE '.claude-igemini'
+$identityPrompt = Join-Path $App 'igemini-system-prompt.md'
+if (-not (Test-Path $identityPrompt) -or (Get-Item $identityPrompt).Length -le 0) {
+  Note "致命：iGemini 产品身份 prompt 缺失（$identityPrompt）"; exit 78
+}
+$env:IGEMINI_SYSTEM_PROMPT_FILE     = $identityPrompt
 $env:CLAUDE_CODE_SUBAGENT_MODEL     = 'deepseek-v4-flash'
 $env:CLAUDE_CODE_EFFORT_LEVEL       = 'max'
 $env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '1'
+$env:DISABLE_GROWTHBOOK             = '1'
+$env:DISABLE_TELEMETRY              = '1'
+$env:DISABLE_ERROR_REPORTING        = '1'
+$env:DISABLE_UPDATES                = '1'
+$env:CLAUDE_CODE_ATTRIBUTION_HEADER = '0'
 # 自带 claude.exe 从 {app}\claude\bin 跑（不是 claude 原生安装位 ~\.local\bin\claude.exe）→ 关掉
 # 它的「安装完整性自检」，否则终端/聊天启动时会刷红字：
 #   claude command at C:\Users\<user>\.local\bin\claude.exe missing or broken · run claude install to repair
@@ -52,6 +62,12 @@ $env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '1'
 # NONESSENTIAL_TRAFFIC 只连带设了 AUTOUPDATER）。两个都设：不自检、也不后台自更新（我们用固定离线版）。
 $env:DISABLE_INSTALLATION_CHECKS = '1'
 $env:DISABLE_AUTOUPDATER         = '1'
+
+# 启动前原子清掉可能进入 system prompt 的旧 bootstrap / GrowthBook 缓存；命中时先留 0600 等价权限备份。
+$sanitizer = Join-Path $App 'sanitize-claude-state.mjs'
+if (-not (Test-Path $sanitizer)) { Note "致命：安全清理器缺失（$sanitizer）"; exit 78 }
+& (Join-Path $Node 'node.exe') $sanitizer $env:CLAUDE_CONFIG_DIR 2>> $Log | ForEach-Object { Note "Claude 状态安全检查：$_" }
+if ($LASTEXITCODE -ne 0) { Note '致命：Claude 状态安全清理失败，拒绝启动'; exit 78 }
 
 # 2) PATH：自带 node、claude、能力工具(.cmd)、pandoc、python；并把 claude.exe 显式喂给 CC
 $env:Path = "$Node;$ClaudeBin;$Tools;$Pandoc;$Python;" + $env:Path

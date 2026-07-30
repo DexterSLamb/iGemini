@@ -10,6 +10,9 @@
 *.bat   text eol=crlf
 *.cmd   text eol=crlf
 
+# Patch files must preserve upstream context verbatim, including existing EOL spaces.
+*.patch text eol=lf -whitespace
+
 # 二进制：不碰行尾、不按文本 diff
 *.png   binary
 *.jpg   binary

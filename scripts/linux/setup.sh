@@ -32,10 +32,22 @@ CFG_DIR="$HOME/.claude-igemini"            # CC 的隔离配置目录
 NPM_PREFIX="$HOME/.npm-global"             # claude 全局装这里（/usr 只读）
 
 CCUI_REPO="https://github.com/siteboon/claudecodeui"
-CCUI_COMMIT="4712431be81718dfb559ef43d7d7d5315bf4e01a"   # 与白标 patch 对齐
+CCUI_COMMIT="27eaf0146a46aa8a55178f3d394360ff7465420f"   # CloudCLI v1.36.3 tag 解引用后的 commit，与白标 patch 对齐
 PATCH="$REPO_ROOT/vendor/igemini-claudecodeui.patch"
+CLAUDE_VERSION_FILE="$REPO_ROOT/scripts/common/CLAUDE_CODE_VERSION"
+IGEMINI_VERSION_FILE="$SCRIPT_DIR/VERSION"
+CLAUDE_VERIFIER="$REPO_ROOT/scripts/common/verify-claude-code.mjs"
+CLAUDE_SANITIZER="$REPO_ROOT/scripts/common/sanitize-claude-state.mjs"
+CLAUDE_CONFIG_PATCH="$REPO_ROOT/scripts/common/patch-cloudcli-claude-config.py"
+PRODUCT_IDENTITY_PATCH="$REPO_ROOT/scripts/common/patch-cloudcli-product-identity.py"
+PRODUCT_SYSTEM_PROMPT="$REPO_ROOT/scripts/common/igemini-system-prompt.md"
+SHELL_IDENTITY_PATCH="$REPO_ROOT/scripts/common/patch-cloudcli-shell-identity.py"
+SINGLE_PROVIDER_PATCH="$REPO_ROOT/scripts/common/patch-cloudcli-single-provider.py"
+RUNTIME_PRUNER="$REPO_ROOT/scripts/common/prune-cloudcli-runtime.mjs"
+CLAUDE_CODE_VERSION="$(tr -d '\r\n' < "$CLAUDE_VERSION_FILE")"
+IGEMINI_VERSION="$(tr -d '\r\n' < "$IGEMINI_VERSION_FILE")"
 
-NODE_MAJOR_MIN=20            # vite7 等要求 node ≥20.19，低于则装 NodeSource 24
+NODE_MAJOR_MIN=22            # Claude Code 2.1.220 要求 Node >=22；低于则装 NodeSource 24
 NODE_NODESOURCE="24"
 NPM_MIRROR="https://registry.npmmirror.com"
 PIP_MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
@@ -64,21 +76,30 @@ command -v git  >/dev/null || die "缺 git"
 command -v curl >/dev/null || die "缺 curl"
 command -v python3 >/dev/null || die "缺 python3"
 [ -f "$PATCH" ] || die "找不到白标 patch: $PATCH"
+[ -s "$IGEMINI_VERSION_FILE" ] || die "找不到 iGemini 版本真源: $IGEMINI_VERSION_FILE"
+[ -f "$CLAUDE_VERIFIER" ] || die "找不到 Claude 校验器: $CLAUDE_VERIFIER"
+[ -f "$CLAUDE_SANITIZER" ] || die "找不到 Claude 状态清理器: $CLAUDE_SANITIZER"
+[ -f "$CLAUDE_CONFIG_PATCH" ] || die "找不到 CLAUDE_CONFIG_DIR 补丁: $CLAUDE_CONFIG_PATCH"
+[ -f "$PRODUCT_IDENTITY_PATCH" ] || die "找不到产品身份注入补丁: $PRODUCT_IDENTITY_PATCH"
+[ -s "$PRODUCT_SYSTEM_PROMPT" ] || die "找不到 iGemini 产品身份 prompt: $PRODUCT_SYSTEM_PROMPT"
+[ -f "$SHELL_IDENTITY_PATCH" ] || die "找不到 Shell 身份注入补丁: $SHELL_IDENTITY_PATCH"
+[ -f "$SINGLE_PROVIDER_PATCH" ] || die "找不到单助手产品补丁: $SINGLE_PROVIDER_PATCH"
+[ -f "$RUNTIME_PRUNER" ] || die "找不到 CloudCLI 运行时裁剪器: $RUNTIME_PRUNER"
 sudo -v || die "需要 sudo 权限装系统包"
 if command -v deepin-immutable-ctl >/dev/null 2>&1; then
   warn "检测到 Deepin 磐石不可变系统：/usr 只读，但 apt 装的包会提交进 ostree 部署、重启保留（已实测）。"
 fi
 ok "预检通过（PROXY=${PROXY:-直连}）"
 
-# ---- 1) Node（≥20.19，否则装 NodeSource 24）----
+# ---- 1) Node（Claude Code 2.1.220 要求 ≥22，否则装 NodeSource 24）----
 say "1/10 Node"
 need_node=1
 if command -v node >/dev/null 2>&1; then
-  ver="$(node -v | sed 's/v//')"; maj="${ver%%.*}"; min="$(echo "$ver" | cut -d. -f2)"
-  if [ "$maj" -gt "$NODE_MAJOR_MIN" ] || { [ "$maj" -eq "$NODE_MAJOR_MIN" ] && [ "$min" -ge 19 ]; }; then
-    need_node=0; ok "已有 node v$ver（满足 ≥20.19）"
+  ver="$(node -v | sed 's/v//')"; maj="${ver%%.*}"
+  if [ "$maj" -ge "$NODE_MAJOR_MIN" ]; then
+    need_node=0; ok "已有 node v$ver（满足 ≥$NODE_MAJOR_MIN）"
   else
-    warn "node v$ver 太旧（vite7 要 ≥20.19），将装 NodeSource $NODE_NODESOURCE"
+    warn "node v$ver 太旧（Claude Code $CLAUDE_CODE_VERSION 要 ≥$NODE_MAJOR_MIN），将装 NodeSource $NODE_NODESOURCE"
   fi
 fi
 if [ "$need_node" = 1 ]; then
@@ -97,37 +118,33 @@ npm config set registry "$NPM_MIRROR" >/dev/null; ok "npm registry → npmmirror
 
 # ---- 2) claudecodeui：克隆@定版 + 白标 patch + npm ci + build + bypass 补丁 + 标题 + prune ----
 say "2/10 claudecodeui（白标构建）"
-if [ -d "$CC/dist-server" ] && [ "$FORCE" = 0 ]; then
-  ok "已构建（$CC/dist-server 存在），跳过。重建用 --force"
+BUILD_FINGERPRINT="$(sha256sum "$PATCH" "$CLAUDE_CONFIG_PATCH" "$SINGLE_PROVIDER_PATCH" \
+  "$PRODUCT_IDENTITY_PATCH" "$PRODUCT_SYSTEM_PROMPT" "$SHELL_IDENTITY_PATCH" "$RUNTIME_PRUNER" \
+  "$IGEMINI_VERSION_FILE" "$SCRIPT_DIR/setup.sh" | sha256sum | awk '{print $1}')"
+if [ -d "$CC/dist-server" ] && [ "$FORCE" = 0 ] \
+   && [ "$(cat "$CC/.igemini-build-fingerprint" 2>/dev/null || true)" = "$BUILD_FINGERPRINT" ]; then
+  ok "构建指纹匹配，复用现有 CloudCLI 运行时。重建用 --force"
 else
   rm -rf "$CC"; mkdir -p "$CC"; cd "$CC"
   git init -q && git remote add origin "$CCUI_REPO"
-  GIT_SSL_NO_VERIFY=0 ${PROXY:+https_proxy=$PROXY http_proxy=$PROXY} git fetch --depth 1 origin "$CCUI_COMMIT" -q
+  # 用 env 传代理:${PROXY:+...} 是运行时展开,不能直接当赋值前缀(bash 只解析时认字面 名=值),
+  # PROXY 非空时首个展开词会被当命令执行而报错;env 把参数当赋值处理,PROXY 空时就是干净的 env git fetch。
+  env GIT_SSL_NO_VERIFY=0 ${PROXY:+https_proxy="$PROXY" http_proxy="$PROXY"} git fetch --depth 1 origin "$CCUI_COMMIT" -q
   git checkout -q FETCH_HEAD
   ok "克隆 @ $(git rev-parse --short HEAD)"
   git apply --binary "$PATCH"; ok "白标 patch 已套用"
-  # bug#1 修（Linux 侧补丁，不进共享 patch）：让会话发现/命名认 CLAUDE_CONFIG_DIR（改 .ts 源，须在 build 前）。
-  # 否则隔离（CLAUDE_CONFIG_DIR=~/.claude-igemini）下仍读 homedir/.claude → 取不到会话名 → 侧栏全 "New Session"。
-  python3 - "$CC/server" <<'PYEOF'
-import sys, os
-base = sys.argv[1]
-edits = {
-  'modules/providers/list/claude/claude-session-synchronizer.provider.ts':
-    ("path.join(os.homedir(), '.claude')",
-     "(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'))"),
-  'modules/providers/services/sessions-watcher.service.ts':
-    ("path.join(os.homedir(), '.claude', 'projects')",
-     "path.join(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'), 'projects')"),
-}
-for rel,(old,new) in edits.items():
-    p = os.path.join(base, rel); s = open(p, encoding='utf-8').read()
-    assert old in s, "CLAUDE_CONFIG_DIR 补丁模式没找到（上游可能变了）: "+rel
-    open(p,'w',encoding='utf-8').write(s.replace(old, new, 1))
-print("  会话发现 → 认 CLAUDE_CONFIG_DIR（synchronizer + watcher）")
-PYEOF
-  # npm ci 不走代理（npmmirror 国内直连；代理会触发 npm 旧版 HttpsProxyAgent bug）
-  npm ci; ok "npm ci 完成"
-  npm run build; ok "build 完成（dist + dist-server）"
+  # iGemini 隔离补丁（不进共享白标 patch）：覆盖 session/auth/skills/MCP/agent 等直接读盘路径。
+  python3 "$CLAUDE_CONFIG_PATCH" "$CC"
+  python3 "$PRODUCT_IDENTITY_PATCH" "$CC"
+  python3 "$SHELL_IDENTITY_PATCH" "$CC"
+  python3 "$SINGLE_PROVIDER_PATCH" "$CC"
+  ok "CLAUDE_CONFIG_DIR 隔离 + 原生产品身份 + iGemini 单助手产品补丁已套用"
+  # npm ci 不走代理（包本身由 npmmirror 国内直连）；web 版不用 Electron/浏览器二进制，
+  # 显式跳过它们，避免 postinstall 绕过 npm registry 后从 GitHub 拉几百 MB。
+  env ELECTRON_SKIP_BINARY_DOWNLOAD=1 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
+      PUPPETEER_SKIP_DOWNLOAD=1 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1 npm ci
+  ok "npm ci 完成"
+  VITE_IGEMINI_VERSION="$IGEMINI_VERSION" npm run build; ok "build 完成（dist + dist-server，iGemini $IGEMINI_VERSION）"
   # bypass-permissions：让网页里 CC 跑 bash 工具不被权限拦（Linux 侧补丁，不进共享 patch）
   python3 - "$CC/dist-server/server/claude-sdk.js" <<'PYEOF'
 import sys
@@ -138,41 +155,9 @@ if "[iGemini] always bypass" in s: print("  bypass 补丁已在，跳过")
 elif old in s: open(f,"w",encoding="utf-8").write(s.replace(old,new)); print("  bypass-permissions 补丁已套用")
 else: print("  ! 未匹配 skipPermissions 原串（上游可能变了，需人工确认）")
 PYEOF
-  # bug#1 watcher 回归修复（绿点/loading）：会话发现认了 CLAUDE_CONFIG_DIR 后，watcher 会对【正在跑的当前会话】
-  # 广播不含运行态的 upsert → 冲掉前端绿点/loading。用 isClaudeSDKSessionActive 抑制。
-  python3 - "$CC/dist-server/server/modules/providers/services/sessions-watcher.service.js" <<'PYEOF'
-import sys; p=sys.argv[1]; s=open(p,encoding="utf-8").read()
-imp="import { generateDisplayName } from '../../../modules/projects/index.js';"
-loop="for (const updatedSessionId of queuedUpdate.updatedSessionIds) {"
-assert imp in s and loop in s, "watcher 锚点没找到（上游可能变了）"
-if "isClaudeSDKSessionActive" not in s:
-    s=s.replace(imp, imp+"\nimport { isClaudeSDKSessionActive } from '../../../claude-sdk.js';",1)
-if "isClaudeSDKSessionActive(updatedSessionId)" not in s:
-    s=s.replace(loop, loop+"\n            if (isClaudeSDKSessionActive(updatedSessionId)) { continue; } // [iGemini] 正在跑的会话别广播 upsert，避免冲掉运行态(绿点/loading)",1)
-    open(p,"w",encoding="utf-8").write(s); print("  watcher suppress-active 修复已套")
-else: print("  watcher 修复已在，跳过")
-PYEOF
-  # Shell 终端免权限：buildShellCommand 拼的 claude 命令没带 --dangerously-skip-permissions
-  # → 网页 Shell 终端跑 claude 会不停问权限（Chat 走 SDK 已 bypass，唯独 Shell 这条漏了）。
-  python3 - "$CC/dist-server/server/modules/websocket/services/shell-websocket.service.js" <<'PYEOF'
-import sys; p=sys.argv[1]; s=open(p,encoding="utf-8").read()
-F=" --dangerously-skip-permissions"
-reps=[
- ("const command = initialCommand || 'claude';",
-  "const command = initialCommand || 'claude"+F+"';"),
- ('claude --resume "${resumeSessionId}"; if ($LASTEXITCODE -ne 0) { claude }',
-  'claude'+F+' --resume "${resumeSessionId}"; if ($LASTEXITCODE -ne 0) { claude'+F+' }'),
- ('claude --resume "${resumeSessionId}" || claude',
-  'claude'+F+' --resume "${resumeSessionId}" || claude'+F),
-]
-if "[iGemini] shell bypass" not in s:
-    n=0
-    for old,new in reps:
-        if old in s: s=s.replace(old,new,1); n+=1
-    s=s.replace("function buildShellCommand","// [iGemini] shell bypass\nfunction buildShellCommand",1)
-    open(p,"w",encoding="utf-8").write(s); print("  shell-websocket claude bypass 已套（%d/3 处；Shell 终端免权限）"%n)
-else: print("  shell bypass 已在，跳过")
-PYEOF
+  grep -Fq "[iGemini] Claude shell identity + bypass" \
+    "$CC/dist-server/server/modules/websocket/services/shell-websocket.service.js" \
+    || die "Shell 原生身份/免权限补丁未进入编译产物"
   # JWT 有效期 7d → 3650d：壳只在启动时自动登录一次、不续签，7 天后 token 过期 → 聊天 WS 鉴权失败。
   # 本机 / 固定账号 iGemini/iGemini 场景下长效 token 无实际危害；将来做远程鉴权改造时再收回。
   python3 - "$CC/dist-server/server/middleware/auth.js" <<'PYEOF'
@@ -185,18 +170,31 @@ PYEOF
   # 标题白标补漏：index.html <title> CloudCLI UI → iGemini（白标 patch 漏了这处）
   sed -i 's|<title>CloudCLI UI</title>|<title>iGemini</title>|' dist/index.html index.html 2>/dev/null || true
   npm prune --omit=dev >/dev/null 2>&1 || npm prune --production >/dev/null 2>&1 || true
-  ok "prune devDeps 完成（node_modules 瘦身）"
+  case "$(uname -m)" in
+    x86_64|amd64) RUNTIME_ARCH="x64" ;;
+    *) die "尚未审计该 Linux 架构的 CloudCLI 原生模块: $(uname -m)" ;;
+  esac
+  node "$RUNTIME_PRUNER" --root "$CC" --platform linux --arch "$RUNTIME_ARCH" \
+    --runtime-node "$(command -v node)" >/dev/null
+  printf '%s\n' "$BUILD_FINGERPRINT" > "$CC/.igemini-build-fingerprint"
+  ok "单助手运行时已按 linux-$RUNTIME_ARCH 白名单裁剪并验证"
 fi
 
 # ---- 3) Claude Code CLI（npm 家前缀，因 /usr 只读）----
 say "3/10 Claude Code CLI"
 npm config set prefix "$NPM_PREFIX" >/dev/null
-if "$NPM_PREFIX/bin/claude" --version >/dev/null 2>&1; then
-  ok "已装 claude $($NPM_PREFIX/bin/claude --version 2>/dev/null | head -1)"
-else
-  npm i -g @anthropic-ai/claude-code
-  ok "claude $($NPM_PREFIX/bin/claude --version 2>/dev/null | head -1)"
+CLAUDE_PACKAGE_ROOT="$NPM_PREFIX/lib/node_modules/@anthropic-ai/claude-code"
+INSTALLED_CLAUDE_VERSION="$(node -e "try{process.stdout.write(require('$CLAUDE_PACKAGE_ROOT/package.json').version)}catch{}" 2>/dev/null || true)"
+if [ "$INSTALLED_CLAUDE_VERSION" != "$CLAUDE_CODE_VERSION" ]; then
+  npm i -g "@anthropic-ai/claude-code@$CLAUDE_CODE_VERSION"
 fi
+case "$(uname -m)" in x86_64|amd64) CLAUDE_PLATFORM="linux-x64" ;; *) die "尚未审计该 Linux 架构的 Claude 二进制: $(uname -m)" ;; esac
+CLAUDE_NATIVE_BIN="$(find "$NPM_PREFIX/lib/node_modules/@anthropic-ai" -path '*/claude-code-linux-x64/claude' -type f | head -1)"
+[ -n "$CLAUDE_NATIVE_BIN" ] || die "未找到 Claude Code Linux x64 原生二进制"
+node "$CLAUDE_VERIFIER" --package-root "$CLAUDE_PACKAGE_ROOT" --binary "$CLAUDE_NATIVE_BIN" --platform "$CLAUDE_PLATFORM" \
+  --require-binary-sha256 \
+  || die "Claude Code 固定版本/哈希校验失败"
+ok "claude $($NPM_PREFIX/bin/claude --version 2>/dev/null | head -1)（版本+SHA-256 已固定）"
 
 # ---- 4) 系统能力工具（apt）----
 say "4/10 系统工具（pandoc / chromium / tesseract / CJK 字体）"
@@ -227,6 +225,8 @@ ok "5 个工具 + 软链就位"
 # ---- 7) 启动器 ----
 say "7/10 启动器 start-web.sh"
 cp "$SCRIPT_DIR/start-web.sh" "$APP/start-web.sh"; chmod +x "$APP/start-web.sh"
+cp "$CLAUDE_SANITIZER" "$APP/sanitize-claude-state.mjs"; chmod 755 "$APP/sanitize-claude-state.mjs"
+cp "$PRODUCT_SYSTEM_PROMPT" "$APP/igemini-system-prompt.md"; chmod 644 "$APP/igemini-system-prompt.md"
 ok "$APP/start-web.sh"
 
 # ---- 8) 隔离配置目录 + 部署版 CLAUDE.md ----

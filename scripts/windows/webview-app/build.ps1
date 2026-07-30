@@ -11,7 +11,7 @@ $ErrorActionPreference = 'Stop'
 $here = $PSScriptRoot
 if (-not $Version) {
   $vf = Join-Path $here '..\installer\VERSION'
-  $Version = if (Test-Path $vf) { (Get-Content $vf -Raw).Trim() } else { '1.1.0' }
+  $Version = if (Test-Path $vf) { (Get-Content $vf -Raw).Trim() } else { '1.3.2' }
 }
 if ($env:HTTPS_PROXY) { [System.Net.WebRequest]::DefaultWebProxy = New-Object System.Net.WebProxy($env:HTTPS_PROXY) }
 

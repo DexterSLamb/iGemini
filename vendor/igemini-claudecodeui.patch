@@ -1,3 +1,60 @@
+diff --git a/index.html b/index.html
+index 1fdfcc7..b487cd5 100644
+--- a/index.html
++++ b/index.html
+@@ -5,7 +5,7 @@
+     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+     <link rel="icon" type="image/png" href="/favicon.png" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
+-    <title>CloudCLI UI</title>
++    <title>iGemini</title>
+ 
+     <!-- Fonts: Encode Sans (UI) + Merriweather (chat) -->
+     <link rel="preconnect" href="https://fonts.googleapis.com" />
+@@ -21,7 +21,7 @@
+     <!-- iOS Safari PWA Meta Tags -->
+     <meta name="mobile-web-app-capable" content="yes" />
+     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+-    <meta name="apple-mobile-web-app-title" content="Claude UI" />
++    <meta name="apple-mobile-web-app-title" content="iGemini" />
+     
+     <!-- iOS Safari Icons -->
+     <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
+diff --git a/public/api-docs.html b/public/api-docs.html
+index c2d6017..27f72f0 100644
+--- a/public/api-docs.html
++++ b/public/api-docs.html
+@@ -3,7 +3,7 @@
+ <head>
+     <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+-    <title>CloudCLI - API Documentation</title>
++    <title>iGemini - API Documentation</title>
+     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+     <link rel="icon" type="image/png" href="/favicon.png" />
+     
+@@ -418,7 +418,7 @@
+                     </svg>
+                 </div>
+                 <div class="brand-text">
+-                    <h1>CloudCLI</h1>
++                    <h1>iGemini</h1>
+                     <div class="subtitle">API Documentation</div>
+                 </div>
+             </div>
+diff --git a/public/clear-cache.html b/public/clear-cache.html
+index 47da67f..4ccc369 100644
+--- a/public/clear-cache.html
++++ b/public/clear-cache.html
+@@ -1,7 +1,7 @@
+ <!DOCTYPE html>
+ <html>
+ <head>
+-    <title>Clear Cache - Claude Code UI</title>
++    <title>Clear Cache - iGemini</title>
+     <style>
+         body {
+             font-family: system-ui, -apple-system, sans-serif;
 diff --git a/public/favicon.png b/public/favicon.png
 index aac6172d9f0b24afcf7ac0d61bb4ac2194066ea6..472e103a0ad28e53b949b78476060f0665c40827 100644
 GIT binary patch
@@ -13175,420 +13232,411 @@ pum8XD72|*L1Iqsw)e;N|zHnC^qZ;@fd}~9tYz)}&a9!xx{{Rahq(%S$
 
 diff --git a/public/igemini.png b/public/igemini.png
 new file mode 100644
-index 0000000000000000000000000000000000000000..a0b67f6efedf95c0d27f4f064ba87e4dee8e6e33
+index 0000000000000000000000000000000000000000..4cceb198ee4572bb5a1173c45bef33b5a7a26a41
 GIT binary patch
-literal 21479
-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
-A%>V!Z
+literal 20871
+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
 
 literal 0
 HcmV?d00001
@@ -13608,6 +13656,177 @@ index fd4113f..069321d 100644
    "start_url": "/",
    "display": "standalone",
    "background_color": "#ffffff",
+diff --git a/public/sw.js b/public/sw.js
+index b909bf5..22c9b9b 100755
+--- a/public/sw.js
++++ b/public/sw.js
+@@ -79,20 +79,20 @@ self.addEventListener('push', event => {
+   try {
+     payload = event.data.json();
+   } catch {
+-    payload = { title: 'CloudCLI', body: event.data.text() };
++    payload = { title: 'iGemini', body: event.data.text() };
+   }
+ 
+   const options = {
+     body: payload.body || '',
+-    icon: '/logo-256.png',
+-    badge: '/logo-128.png',
++    icon: '/igemini.png',
++    badge: '/igemini.png',
+     data: payload.data || {},
+     tag: payload.data?.tag || `${payload.data?.sessionId || 'global'}:${payload.data?.code || 'default'}`,
+     renotify: true
+   };
+ 
+   event.waitUntil(
+-    self.registration.showNotification(payload.title || 'CloudCLI', options)
++    self.registration.showNotification(payload.title || 'iGemini', options)
+   );
+ });
+ 
+diff --git a/server/cli.js b/server/cli.js
+index 08d3af4..628a0d9 100755
+--- a/server/cli.js
++++ b/server/cli.js
+@@ -90,7 +90,7 @@ function getInstallDir() {
+ 
+ // Show status command
+ function showStatus() {
+-    console.log(`\n${c.bright('CloudCLI UI - Status')}\n`);
++    console.log(`\n${c.bright('iGemini - Status')}\n`);
+     console.log(c.dim('═'.repeat(60)));
+ 
+     // Version info
+@@ -147,7 +147,7 @@ function showStatus() {
+ function showHelp() {
+     console.log(`
+ ╔═══════════════════════════════════════════════════════════════╗
+-║              CloudCLI - Command Line Tool               ║
++║                iGemini - Command Line Tool               ║
+ ╚═══════════════════════════════════════════════════════════════╝
+ 
+ Usage:
+@@ -155,7 +155,7 @@ Usage:
+   cloudcli [command] [options]
+ 
+ Commands:
+-  start            Start the CloudCLI server (default)
++  start            Start the iGemini server (default)
+   sandbox          Manage Docker sandbox environments
+   browser-use-mcp  Run the Browser MCP stdio server
+   status           Show configuration and data locations
+@@ -320,7 +320,7 @@ function parseSandboxArgs(args) {
+ 
+ function showSandboxHelp() {
+     console.log(`
+-${c.bright('CloudCLI Sandbox')} — Run CloudCLI inside Docker Sandboxes
++${c.bright('iGemini Sandbox')} — Run iGemini inside Docker Sandboxes
+ 
+ Usage:
+   cloudcli sandbox <workspace>            Create and start a sandbox
+@@ -332,7 +332,7 @@ Subcommands:
+   ${c.bright('start')}        Restart a stopped sandbox and re-launch the web UI
+   ${c.bright('stop')}         Stop a sandbox (preserves state)
+   ${c.bright('rm')}           Remove a sandbox
+-  ${c.bright('logs')}         Show CloudCLI server logs
++  ${c.bright('logs')}         Show iGemini server logs
+   ${c.bright('help')}         Show this help
+ 
+ Options:
+@@ -453,7 +453,7 @@ async function sandboxCommand(args) {
+             restartRun.unref();
+             await new Promise(resolve => setTimeout(resolve, 5000));
+ 
+-            console.log(`${c.info('▶')} Launching CloudCLI web server...`);
++            console.log(`${c.info('▶')} Launching iGemini web server...`);
+             sbx(['exec', opts.name, 'bash', '-c', 'nohup cloudcli start --port 3001 > /tmp/cloudcli-ui.log 2>&1 & disown']);
+ 
+             console.log(`${c.info('▶')} Forwarding port ${opts.port} → 3001...`);
+@@ -476,7 +476,7 @@ async function sandboxCommand(args) {
+                 }
+             }
+ 
+-            console.log(`\n${c.ok('✔')} ${c.bright('CloudCLI is ready!')}`);
++            console.log(`\n${c.ok('✔')} ${c.bright('iGemini is ready!')}`);
+             console.log(`  ${c.info('→')} ${c.bright(`http://localhost:${opts.port}`)}\n`);
+             break;
+         }
+@@ -509,7 +509,7 @@ async function sandboxCommand(args) {
+                 }
+             } catch { /* sbx secret ls not available, skip check */ }
+ 
+-            console.log(`\n${c.bright('CloudCLI Sandbox')}`);
++            console.log(`\n${c.bright('iGemini Sandbox')}`);
+             console.log(c.dim('─'.repeat(50)));
+             console.log(`  Agent:     ${c.info(opts.agent)} ${c.dim(`(${secret} credentials)`)}`);
+             console.log(`  Workspace: ${c.dim(workspace)}`);
+@@ -552,7 +552,7 @@ async function sandboxCommand(args) {
+             }
+ 
+             // Step 3: Start CloudCLI inside the sandbox
+-            console.log(`${c.info('▶')} Launching CloudCLI web server...`);
++            console.log(`${c.info('▶')} Launching iGemini web server...`);
+             sbx(['exec', opts.name, 'bash', '-c', 'nohup cloudcli start --port 3001 > /tmp/cloudcli-ui.log 2>&1 & disown']);
+ 
+             // Step 4: Forward port
+@@ -577,7 +577,7 @@ async function sandboxCommand(args) {
+             }
+ 
+             // Done
+-            console.log(`\n${c.ok('✔')} ${c.bright('CloudCLI is ready!')}`);
++            console.log(`\n${c.ok('✔')} ${c.bright('iGemini is ready!')}`);
+             console.log(`  ${c.info('→')} Open ${c.bright(`http://localhost:${opts.port}`)}`);
+             console.log(`\n${c.dim('  Manage with:')}`);
+             console.log(`  ${c.dim('$')} sbx ls`);
+diff --git a/server/index.js b/server/index.js
+index 0832c49..60ee684 100755
+--- a/server/index.js
++++ b/server/index.js
+@@ -1603,7 +1603,7 @@ async function startServer() {
+ 
+             console.log('');
+             console.log(c.dim('═'.repeat(63)));
+-            console.log(`  ${c.bright('CloudCLI Server - Ready')}`);
++            console.log(`  ${c.bright('iGemini Server - Ready')}`);
+             console.log(c.dim('═'.repeat(63)));
+             console.log('');
+             console.log(`${c.info('[INFO]')} Server URL:  ${c.bright('http://' + DISPLAY_HOST + ':' + SERVER_PORT)}`);
+diff --git a/server/modules/browser-use/browser-use.service.ts b/server/modules/browser-use/browser-use.service.ts
+index 3bda8e7..4766af4 100644
+--- a/server/modules/browser-use/browser-use.service.ts
++++ b/server/modules/browser-use/browser-use.service.ts
+@@ -291,7 +291,7 @@ function runCommand(command: string, args: string[]): Promise<void> {
+ function formatInstallError(error: unknown): string {
+   const message = error instanceof Error ? error.message : String(error);
+   if (message.includes('sudo') && message.includes('password')) {
+-    return 'Installing Chromium system dependencies requires administrator privileges. Run `npx playwright install-deps chromium` on the machine where CloudCLI runs, then try again.';
++    return 'Installing Chromium system dependencies requires administrator privileges. Run `npx playwright install-deps chromium` on the machine where iGemini runs, then try again.';
+   }
+   return message || 'Failed to install Browser runtime.';
+ }
+diff --git a/server/modules/notifications/services/notification-orchestrator.service.js b/server/modules/notifications/services/notification-orchestrator.service.js
+index ad700f1..4d4ec40 100644
+--- a/server/modules/notifications/services/notification-orchestrator.service.js
++++ b/server/modules/notifications/services/notification-orchestrator.service.js
+@@ -10,7 +10,7 @@ const KIND_TO_PREF_KEY = {
+ };
+ 
+ const PROVIDER_LABELS = {
+-  claude: 'Claude',
++  claude: 'iGemini',
+   cursor: 'Cursor',
+   codex: 'Codex',
+   system: 'System'
+@@ -164,7 +164,7 @@ function buildNotificationPayload(event) {
+   const message = CODE_MAP[normalizedEvent.code] || 'You have a new notification';
+ 
+   return {
+-    title: sessionName || 'CloudCLI',
++    title: sessionName || 'iGemini',
+     body: `${providerLabel}: ${message}`,
+     data: {
+       sessionId: normalizedEvent.sessionId || null,
 diff --git a/server/modules/providers/list/claude/claude-session-synchronizer.provider.ts b/server/modules/providers/list/claude/claude-session-synchronizer.provider.ts
 index 9320a2f..08e9e0f 100644
 --- a/server/modules/providers/list/claude/claude-session-synchronizer.provider.ts
@@ -13634,24 +13853,101 @@ index 9320a2f..08e9e0f 100644
      };
    }
  
+diff --git a/server/routes/agent.js b/server/routes/agent.js
+index 1ae605b..7d23a24 100644
+--- a/server/routes/agent.js
++++ b/server/routes/agent.js
+@@ -1137,7 +1137,7 @@ router.post('/', validateExternalApiKey, async (req, res) => {
+           } else {
+             prBody += `Agent task: ${message}`;
+           }
+-          prBody += '\n\n---\n*This pull request was automatically created by CloudCLI.ai Agent.*';
++          prBody += '\n\n---\n*This pull request was automatically created by iGemini.*';
+ 
+           console.log(`📝 PR Title: ${prTitle}`);
+ 
+diff --git a/server/routes/commands.js b/server/routes/commands.js
+index 722fd54..5c4ae4e 100644
+--- a/server/routes/commands.js
++++ b/server/routes/commands.js
+@@ -18,7 +18,7 @@ const router = express.Router();
+ const MODEL_PROVIDERS = ["claude", "cursor", "codex", "opencode"];
+ 
+ const MODEL_PROVIDER_LABELS = {
+-  claude: "Claude",
++  claude: "iGemini",
+   cursor: "Cursor",
+   codex: "Codex",
+   opencode: "OpenCode",
 diff --git a/src/components/auth/view/AuthLoadingScreen.tsx b/src/components/auth/view/AuthLoadingScreen.tsx
-index 9b4987d..4812a43 100644
+index 86a80ce..7e5773c 100644
 --- a/src/components/auth/view/AuthLoadingScreen.tsx
 +++ b/src/components/auth/view/AuthLoadingScreen.tsx
-@@ -12,7 +12,7 @@ export default function AuthLoadingScreen() {
+@@ -1,37 +1,30 @@
+-import { CLOUDCLI_WORDMARK_FONT_FAMILY } from '../../../constants/branding';
++import { MessageSquare } from 'lucide-react';
+ 
+-const loadingDotAnimationDelays = ['0s', '0.15s', '0.3s'];
++const loadingDotAnimationDelays = ['0s', '0.1s', '0.2s'];
+ 
+ export default function AuthLoadingScreen() {
+   return (
+-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
+-      <div aria-hidden className="pointer-events-none absolute inset-0">
+-        <div className="absolute -top-40 left-1/2 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+-      </div>
+-
+-      <div className="relative text-center" role="status" aria-live="polite">
+-        <div className="mb-5 flex justify-center">
+-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/25 ring-1 ring-inset ring-white/20">
+-            <img src="/logo.svg" alt="CloudCLI" className="h-9 w-9" />
++    <div className="flex min-h-screen items-center justify-center bg-background p-4">
++      <div className="text-center" role="status" aria-live="polite">
++        <div className="mb-4 flex justify-center">
++          <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-primary shadow-sm">
++            <MessageSquare className="h-8 w-8 text-primary-foreground" aria-hidden />
            </div>
          </div>
  
--        <h1 className="mb-2 text-2xl font-bold text-foreground">CloudCLI</h1>
+-        <h1
+-          className="mb-4 text-2xl font-bold tracking-tight text-foreground"
+-          style={{ fontFamily: CLOUDCLI_WORDMARK_FONT_FAMILY }}
+-        >
+-          CloudCLI
+-        </h1>
+-        <p className="sr-only">Loading authentication state…</p>
+-        <div aria-hidden className="flex items-center justify-center gap-2">
 +        <h1 className="mb-2 text-2xl font-bold text-foreground">iGemini</h1>
- 
-         <div className="flex items-center justify-center space-x-2">
++
++        <div aria-hidden className="flex items-center justify-center space-x-2">
            {loadingDotAnimationDelays.map((delay) => (
+             <div
+               key={delay}
+-              className="h-2 w-2 animate-bounce rounded-full bg-primary"
++              className="h-2 w-2 animate-bounce rounded-full bg-blue-500"
+               style={{ animationDelay: delay }}
+             />
+           ))}
+         </div>
++
++        <p className="mt-2 text-muted-foreground">Loading...</p>
+       </div>
+     </div>
+   );
 diff --git a/src/components/auth/view/AuthScreenLayout.tsx b/src/components/auth/view/AuthScreenLayout.tsx
-index d53ff95..6c32f4a 100644
+index 6f7f66b..ee2ae29 100644
 --- a/src/components/auth/view/AuthScreenLayout.tsx
 +++ b/src/components/auth/view/AuthScreenLayout.tsx
-@@ -50,7 +50,7 @@ export default function AuthScreenLayout({
+@@ -33,7 +33,7 @@ export default function AuthScreenLayout({
+             <div className="mb-5 flex justify-center">
+               {logo ?? (
+                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/25 ring-1 ring-inset ring-white/20">
+-                  <img src="/logo.svg" alt="CloudCLI" className="h-9 w-9" />
++                  <img src="/igemini.png" alt="iGemini" className="h-9 w-9" />
+                 </div>
+               )}
+             </div>
+@@ -58,7 +58,7 @@ export default function AuthScreenLayout({
                  rel="noopener noreferrer"
                  className="text-xs text-muted-foreground/50 transition-colors hover:text-muted-foreground"
                >
@@ -13661,10 +13957,10 @@ index d53ff95..6c32f4a 100644
              </div>
            )}
 diff --git a/src/components/auth/view/LoginForm.tsx b/src/components/auth/view/LoginForm.tsx
-index cf26ca3..2b6106e 100644
+index c806f42..89bc86d 100644
 --- a/src/components/auth/view/LoginForm.tsx
 +++ b/src/components/auth/view/LoginForm.tsx
-@@ -58,7 +58,7 @@ export default function LoginForm() {
+@@ -59,7 +59,7 @@ export default function LoginForm() {
      <AuthScreenLayout
        title={t('login.title')}
        description={t('login.description')}
@@ -13674,10 +13970,10 @@ index cf26ca3..2b6106e 100644
        <form onSubmit={handleSubmit} className="space-y-4">
          <AuthInputField
 diff --git a/src/components/auth/view/SetupForm.tsx b/src/components/auth/view/SetupForm.tsx
-index 213ce16..f7de244 100644
+index c657658..20145ac 100644
 --- a/src/components/auth/view/SetupForm.tsx
 +++ b/src/components/auth/view/SetupForm.tsx
-@@ -82,10 +82,10 @@ export default function SetupForm() {
+@@ -83,7 +83,7 @@ export default function SetupForm() {
  
    return (
      <AuthScreenLayout
@@ -13685,16 +13981,25 @@ index 213ce16..f7de244 100644
 +      title="Welcome to iGemini"
        description="Set up your account to get started"
        footerText="This is a single-user system. Only one account can be created."
--      logo={<img src="/logo.svg" alt="CloudCLI" className="h-16 w-16" />}
-+      logo={<img src="/igemini.png" alt="iGemini" className="h-16 w-16" />}
      >
-       <form onSubmit={handleSubmit} className="space-y-4">
-         <AuthInputField
+diff --git a/src/components/chat/view/subcomponents/CommandResultModal.tsx b/src/components/chat/view/subcomponents/CommandResultModal.tsx
+index 5096734..f273aeb 100644
+--- a/src/components/chat/view/subcomponents/CommandResultModal.tsx
++++ b/src/components/chat/view/subcomponents/CommandResultModal.tsx
+@@ -58,7 +58,7 @@ type ModelOption = {
+ };
+ 
+ const PROVIDER_LABELS: Record<string, string> = {
+-  claude: 'Claude',
++  claude: 'iGemini',
+   cursor: 'Cursor',
+   codex: 'Codex',
+   opencode: 'OpenCode',
 diff --git a/src/components/chat/view/subcomponents/ProviderSelectionEmptyState.tsx b/src/components/chat/view/subcomponents/ProviderSelectionEmptyState.tsx
-index 6d97ca8..28ad605 100644
+index 6772ae0..ff37431 100644
 --- a/src/components/chat/view/subcomponents/ProviderSelectionEmptyState.tsx
 +++ b/src/components/chat/view/subcomponents/ProviderSelectionEmptyState.tsx
-@@ -88,7 +88,7 @@ function getCurrentModel(
+@@ -94,7 +94,7 @@ function getCurrentModel(
  }
  
  function getProviderDisplayName(p: LLMProvider) {
@@ -13704,7 +14009,7 @@ index 6d97ca8..28ad605 100644
    if (p === "codex") return "Codex";
    if (p === "opencode") return "OpenCode";
 diff --git a/src/components/llm-logo-provider/ClaudeLogo.tsx b/src/components/llm-logo-provider/ClaudeLogo.tsx
-index 5074e2f..7aaf3e2 100644
+index 5074e2f..f82bc02 100644
 --- a/src/components/llm-logo-provider/ClaudeLogo.tsx
 +++ b/src/components/llm-logo-provider/ClaudeLogo.tsx
 @@ -4,25 +4,19 @@ type ClaudeLogoProps = {
@@ -13714,7 +14019,8 @@ index 5074e2f..7aaf3e2 100644
 -    viewBox="0 0 512 509.64"
 +    viewBox="0 0 24 24"
      role="img"
-     aria-label="Claude"
+-    aria-label="Claude"
++    aria-label="iGemini"
      className={className}
      fill="none"
 +    stroke="currentColor"
@@ -13739,8 +14045,21 @@ index 5074e2f..7aaf3e2 100644
  export default ClaudeLogo;
 -
 -
+diff --git a/src/components/mcp/constants.ts b/src/components/mcp/constants.ts
+index 5a1848d..9ebb535 100644
+--- a/src/components/mcp/constants.ts
++++ b/src/components/mcp/constants.ts
+@@ -1,7 +1,7 @@
+ import type { McpFormState, McpProvider, McpScope, McpTransport } from './types';
+ 
+ export const MCP_PROVIDER_NAMES: Record<McpProvider, string> = {
+-  claude: 'Claude',
++  claude: 'iGemini',
+   cursor: 'Cursor',
+   codex: 'Codex',
+   opencode: 'OpenCode',
 diff --git a/src/components/mcp/view/McpServers.tsx b/src/components/mcp/view/McpServers.tsx
-index a77117f..6a2f231 100644
+index a1436fe..a61c6ac 100644
 --- a/src/components/mcp/view/McpServers.tsx
 +++ b/src/components/mcp/view/McpServers.tsx
 @@ -53,7 +53,7 @@ const getServerKey = (server: ProviderMcpServer): string => (
@@ -13761,7 +14080,7 @@ index a77117f..6a2f231 100644
              <ExternalLink className="h-3 w-3" />
            </a>
          </div>
-@@ -235,7 +235,7 @@ export default function McpServers({ selectedProvider, currentProjects }: McpSer
+@@ -242,7 +242,7 @@ export default function McpServers({ selectedProvider, currentProjects }: McpSer
                      {managed && (
                        <div className="text-xs text-muted-foreground">
                          {t('mcpServers.managed.hint', {
@@ -13784,19 +14103,35 @@ index 07980d8..6043601 100644
    return (
      <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 p-5">
 diff --git a/src/components/settings/view/tabs/AboutTab.tsx b/src/components/settings/view/tabs/AboutTab.tsx
-index 027af75..95068c9 100644
+index 0216f17..7e8c698 100644
 --- a/src/components/settings/view/tabs/AboutTab.tsx
 +++ b/src/components/settings/view/tabs/AboutTab.tsx
-@@ -40,7 +40,7 @@ export default function AboutTab() {
-         </div>
+@@ -1,4 +1,4 @@
+-import { Cloud, ExternalLink, MessageSquare, Star, Users } from 'lucide-react';
++import { Cloud, ExternalLink, Star, Users } from 'lucide-react';
+ import { useTranslation } from 'react-i18next';
+ 
+ import { CLOUDCLI_WORDMARK_FONT_FAMILY } from '../../../../constants/branding';
+@@ -36,16 +36,14 @@ export default function AboutTab() {
+     <div className="space-y-6">
+       {/* Logo + name + version */}
+       <div className="flex items-center gap-3">
+-        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary/90 shadow-sm">
+-          <MessageSquare className="h-5 w-5 text-primary-foreground" />
+-        </div>
++        <img src="/igemini.png" alt="iGemini" className="h-10 w-10 flex-shrink-0 rounded-xl shadow-sm" />
          <div>
            <div className="flex items-center gap-2">
--            <span className="text-base font-semibold text-foreground">CloudCLI</span>
-+            <span className="text-base font-semibold text-foreground">iGemini</span>
+             <span
+               className="text-base font-semibold text-foreground"
+               style={{ fontFamily: CLOUDCLI_WORDMARK_FONT_FAMILY }}
+             >
+-              CloudCLI
++              iGemini
+             </span>
              <a
                href={releasesUrl}
-               target="_blank"
-@@ -122,7 +122,7 @@ export default function AboutTab() {
+@@ -128,7 +126,7 @@ export default function AboutTab() {
        {/* Hosted CTA (OSS mode only) */}
        {!IS_PLATFORM && (
          <div className="rounded-xl border border-primary/10 bg-primary/5 p-4">
@@ -13805,7 +14140,7 @@ index 027af75..95068c9 100644
            <p className="mt-1 text-xs text-muted-foreground">
              Team collaboration, shared MCP configs, settings sync across environments, and managed infrastructure.
            </p>
-@@ -141,7 +141,7 @@ export default function AboutTab() {
+@@ -147,7 +145,7 @@ export default function AboutTab() {
        {/* Premium feature placeholders (OSS mode only) */}
        {!IS_PLATFORM && (
          <div className="space-y-4 border-t border-border/50 pt-6">
@@ -13815,7 +14150,7 @@ index 027af75..95068c9 100644
              icon={<Cloud className="h-5 w-5" />}
              title="Sync Settings"
 diff --git a/src/components/settings/view/tabs/agents-settings/AgentListItem.tsx b/src/components/settings/view/tabs/agents-settings/AgentListItem.tsx
-index b23784e..1e561e6 100644
+index 52e87c3..232850b 100644
 --- a/src/components/settings/view/tabs/agents-settings/AgentListItem.tsx
 +++ b/src/components/settings/view/tabs/agents-settings/AgentListItem.tsx
 @@ -17,7 +17,7 @@ type AgentConfig = {
@@ -13828,7 +14163,7 @@ index b23784e..1e561e6 100644
    },
    cursor: {
 diff --git a/src/components/settings/view/tabs/agents-settings/sections/AgentSelectorSection.tsx b/src/components/settings/view/tabs/agents-settings/sections/AgentSelectorSection.tsx
-index a6d017f..3549ea8 100644
+index e25733b..f58372b 100644
 --- a/src/components/settings/view/tabs/agents-settings/sections/AgentSelectorSection.tsx
 +++ b/src/components/settings/view/tabs/agents-settings/sections/AgentSelectorSection.tsx
 @@ -4,7 +4,7 @@ import type { AgentProvider } from '../../../../types/types';
@@ -13839,9 +14174,9 @@ index a6d017f..3549ea8 100644
 +  claude: 'iGemini',
    cursor: 'Cursor',
    codex: 'Codex',
-   gemini: 'Gemini',
+   opencode: 'OpenCode',
 diff --git a/src/components/settings/view/tabs/agents-settings/sections/content/AccountContent.tsx b/src/components/settings/view/tabs/agents-settings/sections/content/AccountContent.tsx
-index c0ed69d..6937890 100644
+index 83fbb24..644024e 100644
 --- a/src/components/settings/view/tabs/agents-settings/sections/content/AccountContent.tsx
 +++ b/src/components/settings/view/tabs/agents-settings/sections/content/AccountContent.tsx
 @@ -22,7 +22,7 @@ type AgentVisualConfig = {
@@ -13854,10 +14189,16 @@ index c0ed69d..6937890 100644
      borderClass: 'border-blue-200 dark:border-blue-800',
      textClass: 'text-blue-900 dark:text-blue-100',
 diff --git a/src/components/settings/view/tabs/api-settings/sections/VersionInfoSection.tsx b/src/components/settings/view/tabs/api-settings/sections/VersionInfoSection.tsx
-index a7d5f83..aefda26 100644
+index 5bd0293..a5d890a 100644
 --- a/src/components/settings/view/tabs/api-settings/sections/VersionInfoSection.tsx
 +++ b/src/components/settings/view/tabs/api-settings/sections/VersionInfoSection.tsx
-@@ -42,7 +42,7 @@ export default function VersionInfoSection({
+@@ -1,4 +1,4 @@
+-import { ExternalLink, Star, MessageSquare } from 'lucide-react';
++import { ExternalLink, Star } from 'lucide-react';
+ import { useTranslation } from 'react-i18next';
+ 
+ import { CLOUDCLI_WORDMARK_FONT_FAMILY } from '../../../../../../constants/branding';
+@@ -44,20 +44,18 @@ export default function VersionInfoSection({
  
    return (
      <div className="border-t border-border/50 pt-6">
@@ -13866,16 +14207,22 @@ index a7d5f83..aefda26 100644
        <div className="space-y-4">
          {/* Logo + name + version */}
          <div className="flex items-center gap-3">
-@@ -51,7 +51,7 @@ export default function VersionInfoSection({
-           </div>
+-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary/90 shadow-sm">
+-            <MessageSquare className="h-4.5 w-4.5 text-primary-foreground" />
+-          </div>
++          <img src="/igemini.png" alt="iGemini" className="h-9 w-9 flex-shrink-0 rounded-lg shadow-sm" />
            <div>
              <div className="flex items-center gap-2">
--              <span className="text-sm font-semibold text-foreground">CloudCLI</span>
-+              <span className="text-sm font-semibold text-foreground">iGemini</span>
+               <span
+                 className="text-sm font-semibold text-foreground"
+                 style={{ fontFamily: CLOUDCLI_WORDMARK_FONT_FAMILY }}
+               >
+-                CloudCLI
++                iGemini
+               </span>
                <a
                  href={releasesUrl}
-                 target="_blank"
-@@ -133,7 +133,7 @@ export default function VersionInfoSection({
+@@ -140,7 +138,7 @@ export default function VersionInfoSection({
          {/* Hosted CTA (OSS mode only) */}
          {!IS_PLATFORM && (
            <div className="rounded-xl border border-primary/10 bg-primary/5 p-4">
@@ -13885,12 +14232,12 @@ index a7d5f83..aefda26 100644
                Team collaboration, shared MCP configs, settings sync across environments, and managed infrastructure.
              </p>
 diff --git a/src/components/sidebar/view/subcomponents/SidebarCollapsed.tsx b/src/components/sidebar/view/subcomponents/SidebarCollapsed.tsx
-index 90a6338..fce894f 100644
+index c4ae430..482c79e 100644
 --- a/src/components/sidebar/view/subcomponents/SidebarCollapsed.tsx
 +++ b/src/components/sidebar/view/subcomponents/SidebarCollapsed.tsx
 @@ -1,17 +1,6 @@
--import { Settings, Sparkles, PanelLeftOpen, Bug } from 'lucide-react';
-+import { Settings, Sparkles, PanelLeftOpen } from 'lucide-react';
+-import { Settings, Sparkles, PanelLeftOpen, Bug, AlertTriangle } from 'lucide-react';
++import { Settings, Sparkles, PanelLeftOpen, AlertTriangle } from 'lucide-react';
  import type { TFunction } from 'i18next';
  
 -const DISCORD_INVITE_URL = 'https://discord.gg/buxwujPNRE';
@@ -13907,7 +14254,7 @@ index 90a6338..fce894f 100644
  type SidebarCollapsedProps = {
    onExpand: () => void;
    onShowSettings: () => void;
-@@ -51,29 +40,7 @@ export default function SidebarCollapsed({
+@@ -53,30 +42,6 @@ export default function SidebarCollapsed({
          <Settings className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" />
        </button>
  
@@ -13934,16 +14281,16 @@ index 90a6338..fce894f 100644
 -      >
 -        <DiscordIcon className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" />
 -      </a>
-+      {/* iGemini 白标：移除折叠态的「报告问题(GitHub Issues)」与「加入社区(Discord)」入口 */}
- 
-       {/* Update indicator */}
-       {updateAvailable && (
+-
+       {/* Restart-required indicator */}
+       {restartRequired && (
+         <div
 diff --git a/src/components/sidebar/view/subcomponents/SidebarFooter.tsx b/src/components/sidebar/view/subcomponents/SidebarFooter.tsx
-index ef1c717..0308a1f 100644
+index f63c3e2..99f750e 100644
 --- a/src/components/sidebar/view/subcomponents/SidebarFooter.tsx
 +++ b/src/components/sidebar/view/subcomponents/SidebarFooter.tsx
 @@ -1,21 +1,7 @@
--import { Settings, ArrowUpCircle, Bug } from 'lucide-react';
+-import { Settings, ArrowUpCircle, Bug, AlertTriangle } from 'lucide-react';
 +import { Settings } from 'lucide-react';
  import type { TFunction } from 'i18next';
 -import { IS_PLATFORM } from '../../../../constants/config';
@@ -13964,13 +14311,14 @@ index ef1c717..0308a1f 100644
 -
  type SidebarFooterProps = {
    updateAvailable: boolean;
-   releaseInfo: ReleaseInfo | null;
-@@ -26,94 +12,11 @@ type SidebarFooterProps = {
+   restartRequired: boolean;
+@@ -27,111 +13,11 @@ type SidebarFooterProps = {
    t: TFunction;
  };
  
 -export default function SidebarFooter({
 -  updateAvailable,
+-  restartRequired,
 -  releaseInfo,
 -  latestVersion,
 -  currentVersion,
@@ -13981,6 +14329,22 @@ index ef1c717..0308a1f 100644
 +export default function SidebarFooter({ onShowSettings, t }: SidebarFooterProps) {
    return (
      <div className="flex-shrink-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0)' }}>
+-      {/* Restart-required banner: the running server version differs from the
+-          installed/frontend version (updated but not restarted). */}
+-      {restartRequired && (
+-        <>
+-          <div className="nav-divider" />
+-          <div className="px-2 py-1.5 md:px-2 md:py-1.5">
+-            <div className="flex items-center gap-2.5 rounded-lg border border-amber-300/60 bg-amber-50/80 px-2.5 py-2 dark:border-amber-700/40 dark:bg-amber-900/15">
+-              <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-500 dark:text-amber-400" />
+-              <span className="min-w-0 flex-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+-                {t('version.restartRequired')}
+-              </span>
+-            </div>
+-          </div>
+-        </>
+-      )}
+-
 -      {/* Update banner */}
 -      {updateAvailable && (
 -        <>
@@ -13996,7 +14360,7 @@ index ef1c717..0308a1f 100644
 -                <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
 -              </div>
 -              <div className="min-w-0 flex-1">
--                <span className="block truncate text-sm font-medium text-blue-600 dark:text-blue-300">
+-                <span className="block truncate text-sm font-normal text-blue-600 dark:text-blue-300">
 -                  {releaseInfo?.title || `v${latestVersion}`}
 -                </span>
 -                <span className="text-[10px] text-blue-500/70 dark:text-blue-400/60">
@@ -14017,7 +14381,7 @@ index ef1c717..0308a1f 100644
 -                <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
 -              </div>
 -              <div className="min-w-0 flex-1 text-left">
--                <span className="block truncate text-sm font-medium text-blue-600 dark:text-blue-300">
+-                <span className="block truncate text-sm font-normal text-blue-600 dark:text-blue-300">
 -                  {releaseInfo?.title || `v${latestVersion}`}
 -                </span>
 -                <span className="text-xs text-blue-500/70 dark:text-blue-400/60">
@@ -14061,7 +14425,7 @@ index ef1c717..0308a1f 100644
        {/* Desktop settings */}
        <div className="hidden px-2 py-1.5 md:block">
          <button
-@@ -125,52 +28,8 @@ export default function SidebarFooter({
+@@ -143,52 +29,8 @@ export default function SidebarFooter({
          </button>
        </div>
  
@@ -14090,7 +14454,7 @@ index ef1c717..0308a1f 100644
 -          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-background/80">
 -            <Bug className="h-4 w-4 text-muted-foreground" />
 -          </div>
--          <span className="text-sm font-medium text-foreground">{t('actions.reportIssue')}</span>
+-          <span className="text-sm font-normal text-foreground">{t('actions.reportIssue')}</span>
 -        </a>
 -      </div>
 -
@@ -14105,7 +14469,7 @@ index ef1c717..0308a1f 100644
 -          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-background/80">
 -            <DiscordIcon className="h-4 w-4 text-muted-foreground" />
 -          </div>
--          <span className="text-sm font-medium text-foreground">{t('actions.joinCommunity')}</span>
+-          <span className="text-sm font-normal text-foreground">{t('actions.joinCommunity')}</span>
 -        </a>
 -      </div>
 -
@@ -14116,10 +14480,10 @@ index ef1c717..0308a1f 100644
            className="flex h-10 w-full items-center gap-3 rounded-xl bg-muted/40 px-3.5 transition-all hover:bg-muted/60 active:scale-[0.98]"
            onClick={onShowSettings}
 diff --git a/src/components/sidebar/view/subcomponents/SidebarHeader.tsx b/src/components/sidebar/view/subcomponents/SidebarHeader.tsx
-index 8eabab2..e58fc3b 100644
+index f3839a0..1c223d4 100644
 --- a/src/components/sidebar/view/subcomponents/SidebarHeader.tsx
 +++ b/src/components/sidebar/view/subcomponents/SidebarHeader.tsx
-@@ -6,7 +6,6 @@ import { IS_PLATFORM } from '../../../../constants/config';
+@@ -7,7 +7,6 @@ import { IS_PLATFORM } from '../../../../constants/config';
  import { cn } from '../../../../lib/utils';
  import type { SidebarSearchMode } from '../../types/types';
  
@@ -14127,7 +14491,7 @@ index 8eabab2..e58fc3b 100644
  
  const MOD_KEY =
    typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl';
-@@ -62,12 +61,8 @@ export default function SidebarHeader({
+@@ -63,16 +62,12 @@ export default function SidebarHeader({
  
    const LogoBlock = () => (
      <div className="flex min-w-0 items-center gap-2.5">
@@ -14136,13 +14500,17 @@ index 8eabab2..e58fc3b 100644
 -          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
 -        </svg>
 -      </div>
--      <h1 className="truncate text-sm font-semibold tracking-tight text-foreground">{t('app.title')}</h1>
 +      <img src="/igemini.png" alt="iGemini" className="h-7 w-7 flex-shrink-0 rounded-lg shadow-sm" />
-+      <h1 className="truncate text-sm font-semibold tracking-tight text-foreground">iGemini</h1>
+       <h1
+         className="truncate text-sm font-bold tracking-tight text-foreground"
+         style={{ fontFamily: CLOUDCLI_WORDMARK_FONT_FAMILY }}
+       >
+-        {t('app.title')}
++        iGemini
+       </h1>
      </div>
    );
- 
-@@ -127,7 +122,6 @@ export default function SidebarHeader({
+@@ -133,7 +128,6 @@ export default function SidebarHeader({
            </div>
          </div>
  
@@ -14151,10 +14519,10 @@ index 8eabab2..e58fc3b 100644
          {/* Search bar */}
          {showSearchTools && (
 diff --git a/src/components/sidebar/view/subcomponents/SidebarProjectList.tsx b/src/components/sidebar/view/subcomponents/SidebarProjectList.tsx
-index 90e6ec7..d994863 100644
+index 84b9302..804c09d 100644
 --- a/src/components/sidebar/view/subcomponents/SidebarProjectList.tsx
 +++ b/src/components/sidebar/view/subcomponents/SidebarProjectList.tsx
-@@ -105,7 +105,7 @@ export default function SidebarProjectList({
+@@ -107,7 +107,7 @@ export default function SidebarProjectList({
    );
  
    useEffect(() => {
@@ -14163,6 +14531,19 @@ index 90e6ec7..d994863 100644
      const displayName = selectedProject?.displayName?.trim();
      if (displayName) {
        baseTitle = `${displayName} - ${baseTitle}`;
+diff --git a/src/components/skills/view/ProviderSkills.tsx b/src/components/skills/view/ProviderSkills.tsx
+index 908ed07..389f663 100644
+--- a/src/components/skills/view/ProviderSkills.tsx
++++ b/src/components/skills/view/ProviderSkills.tsx
+@@ -56,7 +56,7 @@ const MAX_SKILL_FOLDER_FILES = 500;
+ const MAX_SKILL_FOLDER_BYTES = 30 * 1024 * 1024;
+ 
+ const PROVIDER_NAMES: Record<SkillsProvider, string> = {
+-  claude: 'Claude',
++  claude: 'iGemini',
+   codex: 'Codex',
+   cursor: 'Cursor',
+   opencode: 'OpenCode',
 diff --git a/src/i18n/locales/de/auth.json b/src/i18n/locales/de/auth.json
 index 0a1d522..91b411e 100644
 --- a/src/i18n/locales/de/auth.json
@@ -14177,7 +14558,7 @@ index 0a1d522..91b411e 100644
      "password": "Passwort",
      "submit": "Anmelden",
 diff --git a/src/i18n/locales/de/chat.json b/src/i18n/locales/de/chat.json
-index f0b10d7..1625c0f 100644
+index 244cdd1..45a9c71 100644
 --- a/src/i18n/locales/de/chat.json
 +++ b/src/i18n/locales/de/chat.json
 @@ -15,7 +15,7 @@
@@ -14187,9 +14568,9 @@ index f0b10d7..1625c0f 100644
 -    "claude": "Claude",
 +    "claude": "iGemini",
      "cursor": "Cursor",
-     "codex": "Codex",
-     "gemini": "Gemini"
-@@ -55,8 +55,8 @@
+     "codex": "Codex"
+   },
+@@ -54,8 +54,8 @@
    "interactive": {
      "title": "Interaktive Eingabeaufforderung",
      "waiting": "Warte auf deine Antwort in der CLI",
@@ -14200,7 +14581,7 @@ index f0b10d7..1625c0f 100644
      "instructionDetail": "In der CLI würdest du diese Option interaktiv mit den Pfeiltasten oder durch Eingabe der Nummer auswählen."
    },
    "thinking": {
-@@ -83,7 +83,7 @@
+@@ -82,7 +82,7 @@
      "title": "Implementierungsplan"
    },
    "usageLimit": {
@@ -14209,7 +14590,7 @@ index f0b10d7..1625c0f 100644
    },
    "codex": {
      "permissionMode": "Berechtigungsmodus",
-@@ -149,7 +149,7 @@
+@@ -130,7 +130,7 @@
        "google": "von Google"
      },
      "readyPrompt": {
@@ -14217,8 +14598,8 @@ index f0b10d7..1625c0f 100644
 +      "claude": "Bereit, iGemini mit {{model}} zu verwenden. Gib unten deine Nachricht ein.",
        "cursor": "Bereit, Cursor mit {{model}} zu verwenden. Gib unten deine Nachricht ein.",
        "codex": "Bereit, Codex mit {{model}} zu verwenden. Gib unten deine Nachricht ein.",
-       "gemini": "Bereit, Gemini mit {{model}} zu verwenden. Gib unten deine Nachricht ein.",
-@@ -197,7 +197,7 @@
+       "default": "Wähl oben einen Anbieter, um zu beginnen"
+@@ -177,7 +177,7 @@
      },
      "loading": "Terminal wird geladen...",
      "connecting": "Verbindung zum Terminal wird hergestellt...",
@@ -14228,10 +14609,10 @@ index f0b10d7..1625c0f 100644
      "runCommand": "{{command}} in {{projectName}} ausführen",
      "startCli": "Claude CLI wird in {{projectName}} gestartet",
 diff --git a/src/i18n/locales/de/common.json b/src/i18n/locales/de/common.json
-index 636d2e8..454f5f6 100644
+index 6eb1fca..c33b88e 100644
 --- a/src/i18n/locales/de/common.json
 +++ b/src/i18n/locales/de/common.json
-@@ -85,10 +85,10 @@
+@@ -86,10 +86,10 @@
      "openInEditor": "Im Editor öffnen"
    },
    "mainContent": {
@@ -14244,7 +14625,7 @@ index 636d2e8..454f5f6 100644
      "tip": "Tipp",
      "createProjectMobile": "Tipp oben auf die Menüschaltfläche, um auf Projekte zuzugreifen",
      "createProjectDesktop": "Erstell ein neues Projekt, indem du auf das Ordnersymbol in der Seitenleiste klickst",
-@@ -186,9 +186,9 @@
+@@ -187,9 +187,9 @@
        "usingProvidedToken": "Angegebener Token wird verwendet",
        "noAuthentication": "Keine Authentifizierung",
        "sshKey": "SSH-Schlüssel",
@@ -14257,10 +14638,10 @@ index 636d2e8..454f5f6 100644
      },
      "buttons": {
 diff --git a/src/i18n/locales/de/settings.json b/src/i18n/locales/de/settings.json
-index 237e595..7b82615 100644
+index 94a1516..ff9ab27 100644
 --- a/src/i18n/locales/de/settings.json
 +++ b/src/i18n/locales/de/settings.json
-@@ -279,7 +279,7 @@
+@@ -276,7 +276,7 @@
      "apiDocsLink": "API-Dokumentation",
      "documentation": {
        "title": "Externe API-Dokumentation",
@@ -14269,16 +14650,16 @@ index 237e595..7b82615 100644
        "viewLink": "API-Dokumentation anzeigen →"
      },
      "loading": "Lädt...",
-@@ -318,7 +318,7 @@
+@@ -315,7 +315,7 @@
      },
      "account": {
        "claude": {
 -        "description": "Anthropic Claude KI-Assistent"
-+        "description": "Anthropic iGemini KI-Assistent"
++        "description": "iGemini KI-Assistent"
        },
        "cursor": {
          "description": "Cursor KI-gestützter Code-Editor"
-@@ -420,7 +420,7 @@
+@@ -414,7 +414,7 @@
    "mcpServers": {
      "title": "MCP-Server",
      "description": {
@@ -14288,7 +14669,7 @@ index 237e595..7b82615 100644
        "codex": "Model Context Protocol-Server stellen Codex zusätzliche Werkzeuge und Datenquellen zur Verfügung"
      },
 diff --git a/src/i18n/locales/de/sidebar.json b/src/i18n/locales/de/sidebar.json
-index 6542c02..2101546 100644
+index b5469b1..47706f3 100644
 --- a/src/i18n/locales/de/sidebar.json
 +++ b/src/i18n/locales/de/sidebar.json
 @@ -13,14 +13,14 @@
@@ -14322,7 +14703,7 @@ index 5ca25fd..63a1f20 100644
      "password": "Password",
      "submit": "Sign In",
 diff --git a/src/i18n/locales/en/chat.json b/src/i18n/locales/en/chat.json
-index 2c75fad..0bd4769 100644
+index 87f22ad..31af8ca 100644
 --- a/src/i18n/locales/en/chat.json
 +++ b/src/i18n/locales/en/chat.json
 @@ -15,7 +15,7 @@
@@ -14333,8 +14714,8 @@ index 2c75fad..0bd4769 100644
 +    "claude": "iGemini",
      "cursor": "Cursor",
      "codex": "Codex",
-     "gemini": "Gemini",
-@@ -56,8 +56,8 @@
+     "opencode": "OpenCode"
+@@ -55,8 +55,8 @@
    "interactive": {
      "title": "Interactive Prompt",
      "waiting": "Waiting for your response in the CLI",
@@ -14345,7 +14726,7 @@ index 2c75fad..0bd4769 100644
      "instructionDetail": "In the CLI, you would select this option interactively using arrow keys or by typing the number."
    },
    "thinking": {
-@@ -84,7 +84,7 @@
+@@ -83,7 +83,7 @@
      "title": "Implementation Plan"
    },
    "usageLimit": {
@@ -14354,7 +14735,7 @@ index 2c75fad..0bd4769 100644
    },
    "codex": {
      "permissionMode": "Permission Mode",
-@@ -150,7 +150,7 @@
+@@ -149,7 +149,7 @@
        "google": "by Google"
      },
      "readyPrompt": {
@@ -14362,8 +14743,8 @@ index 2c75fad..0bd4769 100644
 +      "claude": "Ready to use iGemini with {{model}}. Start typing your message below.",
        "cursor": "Ready to use Cursor with {{model}}. Start typing your message below.",
        "codex": "Ready to use Codex with {{model}}. Start typing your message below.",
-       "gemini": "Ready to use Gemini with {{model}}. Start typing your message below.",
-@@ -199,7 +199,7 @@
+       "opencode": "Ready to use OpenCode with {{model}}. Start typing your message below.",
+@@ -197,7 +197,7 @@
      },
      "loading": "Loading terminal...",
      "connecting": "Connecting to shell...",
@@ -14373,10 +14754,10 @@ index 2c75fad..0bd4769 100644
      "runCommand": "Run {{command}} in {{projectName}}",
      "startCli": "Starting Claude CLI in {{projectName}}",
 diff --git a/src/i18n/locales/en/common.json b/src/i18n/locales/en/common.json
-index 9137da9..2a207b9 100644
+index f8ab844..5dc157a 100644
 --- a/src/i18n/locales/en/common.json
 +++ b/src/i18n/locales/en/common.json
-@@ -85,10 +85,10 @@
+@@ -86,10 +86,10 @@
      "openInEditor": "Open in Editor"
    },
    "mainContent": {
@@ -14389,7 +14770,7 @@ index 9137da9..2a207b9 100644
      "tip": "Tip",
      "createProjectMobile": "Tap the menu button above to access projects",
      "createProjectDesktop": "Create a new project by clicking the folder icon in the sidebar",
-@@ -186,9 +186,9 @@
+@@ -187,9 +187,9 @@
        "usingProvidedToken": "Using provided token",
        "noAuthentication": "No authentication",
        "sshKey": "SSH Key",
@@ -14402,10 +14783,10 @@ index 9137da9..2a207b9 100644
      },
      "buttons": {
 diff --git a/src/i18n/locales/en/settings.json b/src/i18n/locales/en/settings.json
-index c9513ad..c55aadf 100644
+index 079dfe4..91f9d67 100644
 --- a/src/i18n/locales/en/settings.json
 +++ b/src/i18n/locales/en/settings.json
-@@ -280,7 +280,7 @@
+@@ -302,7 +302,7 @@
      "apiDocsLink": "API Documentation",
      "documentation": {
        "title": "External API Documentation",
@@ -14414,16 +14795,16 @@ index c9513ad..c55aadf 100644
        "viewLink": "View API Documentation →"
      },
      "loading": "Loading...",
-@@ -319,7 +319,7 @@
+@@ -341,7 +341,7 @@
      },
      "account": {
        "claude": {
 -        "description": "Anthropic Claude AI assistant"
-+        "description": "Anthropic iGemini AI assistant"
++        "description": "iGemini AI assistant"
        },
        "cursor": {
          "description": "Cursor AI-powered code editor"
-@@ -424,7 +424,7 @@
+@@ -443,7 +443,7 @@
    "mcpServers": {
      "title": "MCP Servers",
      "description": {
@@ -14432,7 +14813,7 @@ index c9513ad..c55aadf 100644
        "cursor": "Model Context Protocol servers provide additional tools and data sources to Cursor",
        "codex": "Model Context Protocol servers provide additional tools and data sources to Codex",
        "opencode": "Model Context Protocol servers provide additional tools and data sources to OpenCode"
-@@ -453,7 +453,7 @@
+@@ -472,7 +472,7 @@
      },
      "managed": {
        "badge": "Managed",
@@ -14441,7 +14822,7 @@ index c9513ad..c55aadf 100644
      },
      "help": {
        "title": "About Codex MCP",
-@@ -485,7 +485,7 @@
+@@ -504,7 +504,7 @@
      "docs": "Docs",
      "sections": {
        "officialTitle": "Official Plugins",
@@ -14450,7 +14831,7 @@ index c9513ad..c55aadf 100644
        "unofficialTitle": "Other Plugins",
        "unofficialDescription": "Unofficial plugins and integrations from other users. Review the source before installing."
      },
-@@ -514,9 +514,9 @@
+@@ -533,9 +533,9 @@
        "install": "Install"
      },
      "prismCloudCLI": {
@@ -14463,7 +14844,7 @@ index c9513ad..c55aadf 100644
      },
      "sessionManagerPlugin": {
 diff --git a/src/i18n/locales/en/sidebar.json b/src/i18n/locales/en/sidebar.json
-index e96c44e..374cfcb 100644
+index a139274..60cff62 100644
 --- a/src/i18n/locales/en/sidebar.json
 +++ b/src/i18n/locales/en/sidebar.json
 @@ -13,14 +13,14 @@
@@ -14497,7 +14878,7 @@ index 9656b0b..18b051b 100644
      "password": "Mot de passe",
      "submit": "Se connecter",
 diff --git a/src/i18n/locales/fr/chat.json b/src/i18n/locales/fr/chat.json
-index 524c8d0..884035a 100644
+index 89dcb7b..9bf54ea 100644
 --- a/src/i18n/locales/fr/chat.json
 +++ b/src/i18n/locales/fr/chat.json
 @@ -15,7 +15,7 @@
@@ -14508,8 +14889,8 @@ index 524c8d0..884035a 100644
 +    "claude": "iGemini",
      "cursor": "Cursor",
      "codex": "Codex",
-     "gemini": "Gemini",
-@@ -56,8 +56,8 @@
+     "opencode": "OpenCode"
+@@ -55,8 +55,8 @@
    "interactive": {
      "title": "Invite interactive",
      "waiting": "En attente de votre réponse dans le CLI",
@@ -14520,7 +14901,7 @@ index 524c8d0..884035a 100644
      "instructionDetail": "Dans le CLI, vous sélectionneriez cette option de manière interactive avec les touches fléchées ou en tapant le numéro."
    },
    "thinking": {
-@@ -84,7 +84,7 @@
+@@ -83,7 +83,7 @@
      "title": "Plan d'implémentation"
    },
    "usageLimit": {
@@ -14529,7 +14910,7 @@ index 524c8d0..884035a 100644
    },
    "codex": {
      "permissionMode": "Mode de permission",
-@@ -150,7 +150,7 @@
+@@ -131,7 +131,7 @@
        "google": "par Google"
      },
      "readyPrompt": {
@@ -14537,8 +14918,8 @@ index 524c8d0..884035a 100644
 +      "claude": "Prêt à utiliser iGemini avec {{model}}. Commencez à taper votre message ci-dessous.",
        "cursor": "Prêt à utiliser Cursor avec {{model}}. Commencez à taper votre message ci-dessous.",
        "codex": "Prêt à utiliser Codex avec {{model}}. Commencez à taper votre message ci-dessous.",
-       "gemini": "Prêt à utiliser Gemini avec {{model}}. Commencez à taper votre message ci-dessous.",
-@@ -199,10 +199,10 @@
+       "opencode": "Prêt à utiliser OpenCode avec {{model}}. Commencez à taper votre message ci-dessous.",
+@@ -179,10 +179,10 @@
      },
      "loading": "Chargement du terminal...",
      "connecting": "Connexion au shell...",
@@ -14552,10 +14933,10 @@ index 524c8d0..884035a 100644
    },
    "claudeStatus": {
 diff --git a/src/i18n/locales/fr/common.json b/src/i18n/locales/fr/common.json
-index cd18dde..43edfbb 100644
+index b77592a..2ff9f32 100644
 --- a/src/i18n/locales/fr/common.json
 +++ b/src/i18n/locales/fr/common.json
-@@ -84,10 +84,10 @@
+@@ -86,10 +86,10 @@
      "openInEditor": "Ouvrir dans l'éditeur"
    },
    "mainContent": {
@@ -14568,7 +14949,7 @@ index cd18dde..43edfbb 100644
      "tip": "Astuce",
      "createProjectMobile": "Appuyez sur le bouton menu ci-dessus pour accéder aux projets",
      "createProjectDesktop": "Créez un nouveau projet en cliquant sur l'icône de dossier dans la barre latérale",
-@@ -185,9 +185,9 @@
+@@ -187,9 +187,9 @@
        "usingProvidedToken": "Utilisation du token fourni",
        "noAuthentication": "Sans authentification",
        "sshKey": "Clé SSH",
@@ -14581,10 +14962,10 @@ index cd18dde..43edfbb 100644
      },
      "buttons": {
 diff --git a/src/i18n/locales/fr/settings.json b/src/i18n/locales/fr/settings.json
-index 4fab7e1..72ab208 100644
+index bf8994e..baad5b2 100644
 --- a/src/i18n/locales/fr/settings.json
 +++ b/src/i18n/locales/fr/settings.json
-@@ -279,7 +279,7 @@
+@@ -276,7 +276,7 @@
      "apiDocsLink": "Documentation API",
      "documentation": {
        "title": "Documentation de l'API externe",
@@ -14593,16 +14974,16 @@ index 4fab7e1..72ab208 100644
        "viewLink": "Voir la documentation API →"
      },
      "loading": "Chargement...",
-@@ -318,7 +318,7 @@
+@@ -315,7 +315,7 @@
      },
      "account": {
        "claude": {
 -        "description": "Assistant IA Claude d'Anthropic"
-+        "description": "Assistant IA iGemini d'Anthropic"
++        "description": "Assistant IA iGemini"
        },
        "cursor": {
          "description": "Éditeur de code IA Cursor"
-@@ -423,7 +423,7 @@
+@@ -417,7 +417,7 @@
    "mcpServers": {
      "title": "Serveurs MCP",
      "description": {
@@ -14611,7 +14992,7 @@ index 4fab7e1..72ab208 100644
        "cursor": "Les serveurs Model Context Protocol fournissent des outils et sources de données supplémentaires à Cursor",
        "codex": "Les serveurs Model Context Protocol fournissent des outils et sources de données supplémentaires à Codex",
        "opencode": "Les serveurs Model Context Protocol fournissent des outils et sources de données supplémentaires à OpenCode"
-@@ -480,7 +480,7 @@
+@@ -474,7 +474,7 @@
      "docs": "Docs",
      "sections": {
        "officialTitle": "Plugins officiels",
@@ -14620,7 +15001,7 @@ index 4fab7e1..72ab208 100644
        "unofficialTitle": "Autres plugins",
        "unofficialDescription": "Plugins non officiels et intégrations d'autres utilisateurs. Examinez le code source avant d'installer."
      },
-@@ -509,9 +509,9 @@
+@@ -503,9 +503,9 @@
        "install": "Installer"
      },
      "prismCloudCLI": {
@@ -14633,7 +15014,7 @@ index 4fab7e1..72ab208 100644
      },
      "sessionManagerPlugin": {
 diff --git a/src/i18n/locales/fr/sidebar.json b/src/i18n/locales/fr/sidebar.json
-index 8f5ab90..9da0ad7 100644
+index 155d1ff..c03183b 100644
 --- a/src/i18n/locales/fr/sidebar.json
 +++ b/src/i18n/locales/fr/sidebar.json
 @@ -13,14 +13,14 @@
@@ -14668,7 +15049,7 @@ index af13e09..962b30f 100644
      "password": "Password",
      "submit": "Accedi",
 diff --git a/src/i18n/locales/it/chat.json b/src/i18n/locales/it/chat.json
-index ae845d9..9ccbad9 100644
+index 71f4ac3..84e536d 100644
 --- a/src/i18n/locales/it/chat.json
 +++ b/src/i18n/locales/it/chat.json
 @@ -15,7 +15,7 @@
@@ -14678,9 +15059,9 @@ index ae845d9..9ccbad9 100644
 -    "claude": "Claude",
 +    "claude": "iGemini",
      "cursor": "Cursor",
-     "codex": "Codex",
-     "gemini": "Gemini"
-@@ -55,8 +55,8 @@
+     "codex": "Codex"
+   },
+@@ -54,8 +54,8 @@
    "interactive": {
      "title": "Prompt interattivo",
      "waiting": "In attesa della tua risposta nella CLI",
@@ -14691,7 +15072,7 @@ index ae845d9..9ccbad9 100644
      "instructionDetail": "Nella CLI, selezioneresti questa opzione interattivamente usando i tasti freccia o digitando il numero."
    },
    "thinking": {
-@@ -83,7 +83,7 @@
+@@ -82,7 +82,7 @@
      "title": "Piano di implementazione"
    },
    "usageLimit": {
@@ -14700,7 +15081,7 @@ index ae845d9..9ccbad9 100644
    },
    "codex": {
      "permissionMode": "Modalità permessi",
-@@ -149,7 +149,7 @@
+@@ -130,7 +130,7 @@
        "google": "di Google"
      },
      "readyPrompt": {
@@ -14708,8 +15089,8 @@ index ae845d9..9ccbad9 100644
 +      "claude": "Pronto a usare iGemini con {{model}}. Inizia a digitare il tuo messaggio qui sotto.",
        "cursor": "Pronto a usare Cursor con {{model}}. Inizia a digitare il tuo messaggio qui sotto.",
        "codex": "Pronto a usare Codex con {{model}}. Inizia a digitare il tuo messaggio qui sotto.",
-       "gemini": "Pronto a usare Gemini con {{model}}. Inizia a digitare il tuo messaggio qui sotto.",
-@@ -197,7 +197,7 @@
+       "default": "Seleziona un provider sopra per iniziare"
+@@ -177,7 +177,7 @@
      },
      "loading": "Caricamento terminale...",
      "connecting": "Connessione alla shell...",
@@ -14719,10 +15100,10 @@ index ae845d9..9ccbad9 100644
      "runCommand": "Esegui {{command}} in {{projectName}}",
      "startCli": "Avvio Claude CLI in {{projectName}}",
 diff --git a/src/i18n/locales/it/common.json b/src/i18n/locales/it/common.json
-index 79f9f67..a597b10 100644
+index 1df91a0..00a959d 100644
 --- a/src/i18n/locales/it/common.json
 +++ b/src/i18n/locales/it/common.json
-@@ -85,10 +85,10 @@
+@@ -86,10 +86,10 @@
      "openInEditor": "Apri nell'editor"
    },
    "mainContent": {
@@ -14735,7 +15116,7 @@ index 79f9f67..a597b10 100644
      "tip": "Suggerimento",
      "createProjectMobile": "Tocca il pulsante menu in alto per accedere ai progetti",
      "createProjectDesktop": "Crea un nuovo progetto cliccando l'icona cartella nella barra laterale",
-@@ -186,9 +186,9 @@
+@@ -187,9 +187,9 @@
        "usingProvidedToken": "Usando token fornito",
        "noAuthentication": "Nessuna autenticazione",
        "sshKey": "Chiave SSH",
@@ -14748,10 +15129,10 @@ index 79f9f67..a597b10 100644
      },
      "buttons": {
 diff --git a/src/i18n/locales/it/settings.json b/src/i18n/locales/it/settings.json
-index d283bdb..0b496f7 100644
+index 914c6aa..bc5f03a 100644
 --- a/src/i18n/locales/it/settings.json
 +++ b/src/i18n/locales/it/settings.json
-@@ -279,7 +279,7 @@
+@@ -276,7 +276,7 @@
      "apiDocsLink": "Documentazione API",
      "documentation": {
        "title": "Documentazione API esterna",
@@ -14760,16 +15141,16 @@ index d283bdb..0b496f7 100644
        "viewLink": "Vedi documentazione API →"
      },
      "loading": "Caricamento...",
-@@ -318,7 +318,7 @@
+@@ -315,7 +315,7 @@
      },
      "account": {
        "claude": {
 -        "description": "Assistente AI Anthropic Claude"
-+        "description": "Assistente AI Anthropic iGemini"
++        "description": "Assistente AI iGemini"
        },
        "cursor": {
          "description": "Editor di codice potenziato da AI Cursor"
-@@ -420,7 +420,7 @@
+@@ -414,7 +414,7 @@
    "mcpServers": {
      "title": "Server MCP",
      "description": {
@@ -14779,7 +15160,7 @@ index d283bdb..0b496f7 100644
        "codex": "I server Model Context Protocol forniscono strumenti e fonti dati aggiuntive a Codex"
      },
 diff --git a/src/i18n/locales/it/sidebar.json b/src/i18n/locales/it/sidebar.json
-index a09ab87..7bddc3d 100644
+index 17f5a9f..4a0ac48 100644
 --- a/src/i18n/locales/it/sidebar.json
 +++ b/src/i18n/locales/it/sidebar.json
 @@ -13,14 +13,14 @@
@@ -14864,10 +15245,10 @@ index cd20292..f5cc73a 100644
      "runCommand": "{{projectName}}で{{command}}を実行",
      "startCli": "{{projectName}}でClaude CLIを起動しています",
 diff --git a/src/i18n/locales/ja/common.json b/src/i18n/locales/ja/common.json
-index 498ee46..52dc783 100644
+index d61cf4e..ced085f 100644
 --- a/src/i18n/locales/ja/common.json
 +++ b/src/i18n/locales/ja/common.json
-@@ -85,10 +85,10 @@
+@@ -86,10 +86,10 @@
      "openInEditor": "エディタで開く"
    },
    "mainContent": {
@@ -14880,7 +15261,7 @@ index 498ee46..52dc783 100644
      "tip": "ヒント",
      "createProjectMobile": "上部のメニューボタンからプロジェクトにアクセスできます",
      "createProjectDesktop": "サイドバーのフォルダアイコンをクリックして新しいプロジェクトを作成できます",
-@@ -186,9 +186,9 @@
+@@ -187,9 +187,9 @@
        "usingProvidedToken": "入力されたトークンを使用",
        "noAuthentication": "認証なし",
        "sshKey": "SSHキー",
@@ -14893,10 +15274,10 @@ index 498ee46..52dc783 100644
      },
      "buttons": {
 diff --git a/src/i18n/locales/ja/settings.json b/src/i18n/locales/ja/settings.json
-index 0ad10c4..fe963a2 100644
+index abe4df4..33aedec 100644
 --- a/src/i18n/locales/ja/settings.json
 +++ b/src/i18n/locales/ja/settings.json
-@@ -279,7 +279,7 @@
+@@ -276,7 +276,7 @@
      "apiDocsLink": "APIドキュメント",
      "documentation": {
        "title": "外部APIドキュメント",
@@ -14905,16 +15286,16 @@ index 0ad10c4..fe963a2 100644
        "viewLink": "APIドキュメントを見る →"
      },
      "loading": "読み込み中...",
-@@ -318,7 +318,7 @@
+@@ -315,7 +315,7 @@
      },
      "account": {
        "claude": {
 -        "description": "Anthropic Claude AIアシスタント"
-+        "description": "Anthropic iGemini AIアシスタント"
++        "description": "iGemini AIアシスタント"
        },
        "cursor": {
          "description": "Cursor AI搭載コードエディタ"
-@@ -420,7 +420,7 @@
+@@ -414,7 +414,7 @@
    "mcpServers": {
      "title": "MCPサーバー",
      "description": {
@@ -14924,7 +15305,7 @@ index 0ad10c4..fe963a2 100644
        "codex": "Model Context Protocolサーバーは、Codexに追加のツールやデータソースを提供します"
      },
 diff --git a/src/i18n/locales/ja/sidebar.json b/src/i18n/locales/ja/sidebar.json
-index dc9d053..fa8f17e 100644
+index 576ff7b..4d99183 100644
 --- a/src/i18n/locales/ja/sidebar.json
 +++ b/src/i18n/locales/ja/sidebar.json
 @@ -13,14 +13,14 @@
@@ -14958,7 +15339,7 @@ index 08f09e7..71e7baf 100644
      "password": "비밀번호",
      "submit": "로그인",
 diff --git a/src/i18n/locales/ko/chat.json b/src/i18n/locales/ko/chat.json
-index c9df5c2..d6b7697 100644
+index 7c7f7da..01296e4 100644
 --- a/src/i18n/locales/ko/chat.json
 +++ b/src/i18n/locales/ko/chat.json
 @@ -15,7 +15,7 @@
@@ -14968,9 +15349,9 @@ index c9df5c2..d6b7697 100644
 -    "claude": "Claude",
 +    "claude": "iGemini",
      "cursor": "Cursor",
-     "codex": "Codex",
-     "gemini": "Gemini"
-@@ -55,8 +55,8 @@
+     "codex": "Codex"
+   },
+@@ -54,8 +54,8 @@
    "interactive": {
      "title": "대화형 프롬프트",
      "waiting": "CLI에서 응답을 기다리는 중",
@@ -14981,7 +15362,7 @@ index c9df5c2..d6b7697 100644
      "instructionDetail": "CLI에서 화살표 키 또는 숫자를 입력하여 이 옵션을 대화형으로 선택합니다."
    },
    "thinking": {
-@@ -83,7 +83,7 @@
+@@ -82,7 +82,7 @@
      "title": "구현 계획"
    },
    "usageLimit": {
@@ -14990,7 +15371,7 @@ index c9df5c2..d6b7697 100644
    },
    "codex": {
      "permissionMode": "권한 모드",
-@@ -131,7 +131,7 @@
+@@ -130,7 +130,7 @@
        "google": "Google 제공"
      },
      "readyPrompt": {
@@ -14998,8 +15379,8 @@ index c9df5c2..d6b7697 100644
 +      "claude": "{{model}} 모델로 iGemini를 사용할 준비가 되었습니다. 아래에 메시지를 입력하세요.",
        "cursor": "{{model}} 모델로 Cursor를 사용할 준비가 되었습니다. 아래에 메시지를 입력하세요.",
        "codex": "{{model}} 모델로 Codex를 사용할 준비가 되었습니다. 아래에 메시지를 입력하세요.",
-       "gemini": "{{model}} 모델로 Gemini를 사용할 준비가 되었습니다. 아래에 메시지를 입력하세요.",
-@@ -179,7 +179,7 @@
+       "default": "시작하려면 위에서 제공자를 선택하세요"
+@@ -177,7 +177,7 @@
      },
      "loading": "터미널 로딩 중...",
      "connecting": "Shell에 연결 중...",
@@ -15009,10 +15390,10 @@ index c9df5c2..d6b7697 100644
      "runCommand": "{{projectName}}에서 {{command}} 실행",
      "startCli": "{{projectName}}에서 Claude CLI 시작",
 diff --git a/src/i18n/locales/ko/common.json b/src/i18n/locales/ko/common.json
-index 0324445..c59d1e4 100644
+index 58070ab..3d277b6 100644
 --- a/src/i18n/locales/ko/common.json
 +++ b/src/i18n/locales/ko/common.json
-@@ -85,10 +85,10 @@
+@@ -86,10 +86,10 @@
      "openInEditor": "에디터에서 열기"
    },
    "mainContent": {
@@ -15025,7 +15406,7 @@ index 0324445..c59d1e4 100644
      "tip": "팁",
      "createProjectMobile": "위의 메뉴 버튼을 눌러 프로젝트에 접근하세요",
      "createProjectDesktop": "사이드바의 폴더 아이콘을 클릭하여 새 프로젝트를 생성하세요",
-@@ -186,9 +186,9 @@
+@@ -187,9 +187,9 @@
        "usingProvidedToken": "제공된 토큰 사용",
        "noAuthentication": "인증 없음",
        "sshKey": "SSH 키",
@@ -15038,10 +15419,10 @@ index 0324445..c59d1e4 100644
      },
      "buttons": {
 diff --git a/src/i18n/locales/ko/settings.json b/src/i18n/locales/ko/settings.json
-index 3fd7a28..d618c9c 100644
+index 8577ecd..819ed20 100644
 --- a/src/i18n/locales/ko/settings.json
 +++ b/src/i18n/locales/ko/settings.json
-@@ -279,7 +279,7 @@
+@@ -276,7 +276,7 @@
      "apiDocsLink": "API 문서",
      "documentation": {
        "title": "외부 API 문서",
@@ -15050,16 +15431,16 @@ index 3fd7a28..d618c9c 100644
        "viewLink": "API 문서 보기 →"
      },
      "loading": "로딩 중...",
-@@ -318,7 +318,7 @@
+@@ -315,7 +315,7 @@
      },
      "account": {
        "claude": {
 -        "description": "Anthropic Claude AI 어시스턴트"
-+        "description": "Anthropic iGemini AI 어시스턴트"
++        "description": "iGemini AI 어시스턴트"
        },
        "cursor": {
          "description": "Cursor AI 기반 코드 에디터"
-@@ -420,7 +420,7 @@
+@@ -414,7 +414,7 @@
    "mcpServers": {
      "title": "MCP 서버",
      "description": {
@@ -15069,7 +15450,7 @@ index 3fd7a28..d618c9c 100644
        "codex": "Model Context Protocol 서버는 Codex에 추가 도구와 데이터 소스를 제공합니다"
      },
 diff --git a/src/i18n/locales/ko/sidebar.json b/src/i18n/locales/ko/sidebar.json
-index 41b2937..17404f7 100644
+index 32635a0..7109c62 100644
 --- a/src/i18n/locales/ko/sidebar.json
 +++ b/src/i18n/locales/ko/sidebar.json
 @@ -13,14 +13,14 @@
@@ -15089,13 +15470,6 @@ index 41b2937..17404f7 100644
      "subtitle": "AI 코딩 어시스턴트 UI"
    },
    "sessions": {
-@@ -127,4 +127,4 @@
-     "allConversationsDeleted": "프로젝트가 사이드바에서 제거됩니다. 파일, 메모리 및 세션 데이터는 보존됩니다.",
-     "cannotUndo": "나중에 프로젝트를 다시 추가할 수 있습니다."
-   }
--}
-\ No newline at end of file
-+}
 diff --git a/src/i18n/locales/ru/auth.json b/src/i18n/locales/ru/auth.json
 index 919a4a3..4fe34ca 100644
 --- a/src/i18n/locales/ru/auth.json
@@ -15110,7 +15484,7 @@ index 919a4a3..4fe34ca 100644
      "password": "Пароль",
      "submit": "Войти",
 diff --git a/src/i18n/locales/ru/chat.json b/src/i18n/locales/ru/chat.json
-index 8d3e9e0..77f41e3 100644
+index af853ce..3bdce86 100644
 --- a/src/i18n/locales/ru/chat.json
 +++ b/src/i18n/locales/ru/chat.json
 @@ -15,7 +15,7 @@
@@ -15120,9 +15494,9 @@ index 8d3e9e0..77f41e3 100644
 -    "claude": "Claude",
 +    "claude": "iGemini",
      "cursor": "Cursor",
-     "codex": "Codex",
-     "gemini": "Gemini"
-@@ -55,8 +55,8 @@
+     "codex": "Codex"
+   },
+@@ -54,8 +54,8 @@
    "interactive": {
      "title": "Интерактивный запрос",
      "waiting": "Ожидание вашего ответа в CLI",
@@ -15133,7 +15507,7 @@ index 8d3e9e0..77f41e3 100644
      "instructionDetail": "В CLI вы бы выбрали эту опцию интерактивно, используя клавиши со стрелками или введя номер."
    },
    "thinking": {
-@@ -83,7 +83,7 @@
+@@ -82,7 +82,7 @@
      "title": "План реализации"
    },
    "usageLimit": {
@@ -15142,7 +15516,7 @@ index 8d3e9e0..77f41e3 100644
    },
    "codex": {
      "permissionMode": "Режим разрешений",
-@@ -149,7 +149,7 @@
+@@ -130,7 +130,7 @@
        "google": "от Google"
      },
      "readyPrompt": {
@@ -15150,8 +15524,8 @@ index 8d3e9e0..77f41e3 100644
 +      "claude": "Готов использовать iGemini с {{model}}. Начните вводить сообщение ниже.",
        "cursor": "Готов использовать Cursor с {{model}}. Начните вводить сообщение ниже.",
        "codex": "Готов использовать Codex с {{model}}. Начните вводить сообщение ниже.",
-       "gemini": "Готов использовать Gemini с {{model}}. Начните вводить сообщение ниже.",
-@@ -197,7 +197,7 @@
+       "default": "Выберите провайдера выше для начала"
+@@ -177,7 +177,7 @@
      },
      "loading": "Загрузка терминала...",
      "connecting": "Подключение к оболочке...",
@@ -15161,10 +15535,10 @@ index 8d3e9e0..77f41e3 100644
      "runCommand": "Выполнить {{command}} в {{projectName}}",
      "startCli": "Запуск Claude CLI в {{projectName}}",
 diff --git a/src/i18n/locales/ru/common.json b/src/i18n/locales/ru/common.json
-index fc71abe..67502ef 100644
+index a1ce1c3..684af62 100644
 --- a/src/i18n/locales/ru/common.json
 +++ b/src/i18n/locales/ru/common.json
-@@ -85,10 +85,10 @@
+@@ -86,10 +86,10 @@
      "openInEditor": "Открыть в редакторе"
    },
    "mainContent": {
@@ -15177,7 +15551,7 @@ index fc71abe..67502ef 100644
      "tip": "Совет",
      "createProjectMobile": "Нажмите кнопку меню выше для доступа к проектам",
      "createProjectDesktop": "Создайте новый проект, нажав на значок папки на боковой панели",
-@@ -186,9 +186,9 @@
+@@ -187,9 +187,9 @@
        "usingProvidedToken": "Использование предоставленного токена",
        "noAuthentication": "Без аутентификации",
        "sshKey": "SSH ключ",
@@ -15190,10 +15564,10 @@ index fc71abe..67502ef 100644
      },
      "buttons": {
 diff --git a/src/i18n/locales/ru/settings.json b/src/i18n/locales/ru/settings.json
-index 94e88f3..d3ca9b8 100644
+index 7e47acd..1c15eef 100644
 --- a/src/i18n/locales/ru/settings.json
 +++ b/src/i18n/locales/ru/settings.json
-@@ -279,7 +279,7 @@
+@@ -276,7 +276,7 @@
      "apiDocsLink": "Документация API",
      "documentation": {
        "title": "Документация внешнего API",
@@ -15202,16 +15576,16 @@ index 94e88f3..d3ca9b8 100644
        "viewLink": "Просмотр документации API →"
      },
      "loading": "Загрузка...",
-@@ -318,7 +318,7 @@
+@@ -315,7 +315,7 @@
      },
      "account": {
        "claude": {
 -        "description": "AI-ассистент Anthropic Claude"
-+        "description": "AI-ассистент Anthropic iGemini"
++        "description": "AI-ассистент iGemini"
        },
        "cursor": {
          "description": "Редактор кода с AI Cursor"
-@@ -420,7 +420,7 @@
+@@ -414,7 +414,7 @@
    "mcpServers": {
      "title": "MCP серверы",
      "description": {
@@ -15221,7 +15595,7 @@ index 94e88f3..d3ca9b8 100644
        "codex": "Серверы Model Context Protocol предоставляют дополнительные инструменты и источники данных для Codex"
      },
 diff --git a/src/i18n/locales/ru/sidebar.json b/src/i18n/locales/ru/sidebar.json
-index 3798151..59a06b4 100644
+index 1fa5135..8f8d2e3 100644
 --- a/src/i18n/locales/ru/sidebar.json
 +++ b/src/i18n/locales/ru/sidebar.json
 @@ -13,14 +13,14 @@
@@ -15255,7 +15629,7 @@ index 55bb4ea..ebdde96 100644
      "password": "Şifre",
      "submit": "Giriş Yap",
 diff --git a/src/i18n/locales/tr/chat.json b/src/i18n/locales/tr/chat.json
-index 74ce954..01a0fef 100644
+index 19e6ee4..29aaa08 100644
 --- a/src/i18n/locales/tr/chat.json
 +++ b/src/i18n/locales/tr/chat.json
 @@ -15,7 +15,7 @@
@@ -15265,9 +15639,9 @@ index 74ce954..01a0fef 100644
 -    "claude": "Claude",
 +    "claude": "iGemini",
      "cursor": "Cursor",
-     "codex": "Codex",
-     "gemini": "Gemini"
-@@ -55,8 +55,8 @@
+     "codex": "Codex"
+   },
+@@ -54,8 +54,8 @@
    "interactive": {
      "title": "Etkileşimli Prompt",
      "waiting": "CLI'da yanıtın bekleniyor",
@@ -15278,7 +15652,7 @@ index 74ce954..01a0fef 100644
      "instructionDetail": "CLI'da bu seçeneği ok tuşları veya numara girerek interaktif olarak seçebilirsin."
    },
    "thinking": {
-@@ -83,7 +83,7 @@
+@@ -82,7 +82,7 @@
      "title": "Uygulama Planı"
    },
    "usageLimit": {
@@ -15287,16 +15661,16 @@ index 74ce954..01a0fef 100644
    },
    "codex": {
      "permissionMode": "İzin Modu",
-@@ -149,7 +149,7 @@
+@@ -130,7 +130,7 @@
        "google": "Google tarafından"
      },
      "readyPrompt": {
 -      "claude": "Claude'u {{model}} ile kullanmaya hazır. Mesajını aşağıya yazmaya başla.",
-+      "claude": "iGemini'u {{model}} ile kullanmaya hazır. Mesajını aşağıya yazmaya başla.",
++      "claude": "iGemini'yi {{model}} ile kullanmaya hazır. Mesajını aşağıya yazmaya başla.",
        "cursor": "Cursor'ı {{model}} ile kullanmaya hazır. Mesajını aşağıya yazmaya başla.",
        "codex": "Codex'i {{model}} ile kullanmaya hazır. Mesajını aşağıya yazmaya başla.",
-       "gemini": "Gemini'yi {{model}} ile kullanmaya hazır. Mesajını aşağıya yazmaya başla.",
-@@ -197,7 +197,7 @@
+       "default": "Başlamak için yukarıdan bir sağlayıcı seç"
+@@ -177,7 +177,7 @@
      },
      "loading": "Terminal yükleniyor...",
      "connecting": "Shell'e bağlanılıyor...",
@@ -15306,10 +15680,10 @@ index 74ce954..01a0fef 100644
      "runCommand": "{{projectName}} içinde {{command}} çalıştır",
      "startCli": "{{projectName}} içinde Claude CLI başlatılıyor",
 diff --git a/src/i18n/locales/tr/common.json b/src/i18n/locales/tr/common.json
-index f1fa66b..e577f9a 100644
+index 4b91706..52ef27b 100644
 --- a/src/i18n/locales/tr/common.json
 +++ b/src/i18n/locales/tr/common.json
-@@ -85,10 +85,10 @@
+@@ -86,10 +86,10 @@
      "openInEditor": "Editörde Aç"
    },
    "mainContent": {
@@ -15322,7 +15696,7 @@ index f1fa66b..e577f9a 100644
      "tip": "İpucu",
      "createProjectMobile": "Projelere erişmek için yukarıdaki menü düğmesine dokun",
      "createProjectDesktop": "Kenar çubuğundaki klasör simgesine tıklayarak yeni bir proje oluştur",
-@@ -186,9 +186,9 @@
+@@ -187,9 +187,9 @@
        "usingProvidedToken": "Girilen token kullanılıyor",
        "noAuthentication": "Kimlik doğrulama yok",
        "sshKey": "SSH Anahtarı",
@@ -15335,10 +15709,10 @@ index f1fa66b..e577f9a 100644
      },
      "buttons": {
 diff --git a/src/i18n/locales/tr/settings.json b/src/i18n/locales/tr/settings.json
-index 0176354..dd70320 100644
+index 52377b3..d08593b 100644
 --- a/src/i18n/locales/tr/settings.json
 +++ b/src/i18n/locales/tr/settings.json
-@@ -279,7 +279,7 @@
+@@ -277,7 +277,7 @@
      "apiDocsLink": "API Dokümantasyonu",
      "documentation": {
        "title": "Harici API Dokümantasyonu",
@@ -15347,16 +15721,16 @@ index 0176354..dd70320 100644
        "viewLink": "API Dokümantasyonunu Görüntüle →"
      },
      "loading": "Yükleniyor...",
-@@ -318,7 +318,7 @@
+@@ -316,7 +316,7 @@
      },
      "account": {
        "claude": {
 -        "description": "Anthropic Claude AI asistanı"
-+        "description": "Anthropic iGemini AI asistanı"
++        "description": "iGemini AI asistanı"
        },
        "cursor": {
          "description": "Cursor AI destekli kod editörü"
-@@ -420,7 +420,7 @@
+@@ -415,7 +415,7 @@
    "mcpServers": {
      "title": "MCP Sunucuları",
      "description": {
@@ -15366,7 +15740,7 @@ index 0176354..dd70320 100644
        "codex": "Model Context Protocol sunucuları Codex'e ek araçlar ve veri kaynakları sağlar"
      },
 diff --git a/src/i18n/locales/tr/sidebar.json b/src/i18n/locales/tr/sidebar.json
-index fefcfed..41b1218 100644
+index 8932e15..f17a94c 100644
 --- a/src/i18n/locales/tr/sidebar.json
 +++ b/src/i18n/locales/tr/sidebar.json
 @@ -13,14 +13,14 @@
@@ -15400,7 +15774,7 @@ index 3d790f3..b51a4e4 100644
      "password": "密码",
      "submit": "登录",
 diff --git a/src/i18n/locales/zh-CN/chat.json b/src/i18n/locales/zh-CN/chat.json
-index 8ebe68d..56758fe 100644
+index 67abca2..004be37 100644
 --- a/src/i18n/locales/zh-CN/chat.json
 +++ b/src/i18n/locales/zh-CN/chat.json
 @@ -15,7 +15,7 @@
@@ -15410,9 +15784,9 @@ index 8ebe68d..56758fe 100644
 -    "claude": "Claude",
 +    "claude": "iGemini",
      "cursor": "Cursor",
-     "codex": "Codex",
-     "gemini": "Gemini"
-@@ -55,8 +55,8 @@
+     "codex": "Codex"
+   },
+@@ -54,8 +54,8 @@
    "interactive": {
      "title": "交互式提示",
      "waiting": "等待您在 CLI 中响应",
@@ -15423,7 +15797,7 @@ index 8ebe68d..56758fe 100644
      "instructionDetail": "在 CLI 中，您可以使用方向键或输入数字来交互式地选择此选项。"
    },
    "thinking": {
-@@ -83,7 +83,7 @@
+@@ -82,7 +82,7 @@
      "title": "实施计划"
    },
    "usageLimit": {
@@ -15432,7 +15806,7 @@ index 8ebe68d..56758fe 100644
    },
    "codex": {
      "permissionMode": "权限模式",
-@@ -131,7 +131,7 @@
+@@ -130,7 +130,7 @@
        "google": "由 Google 提供"
      },
      "readyPrompt": {
@@ -15440,8 +15814,8 @@ index 8ebe68d..56758fe 100644
 +      "claude": "准备好使用带有 {{model}} 的 iGemini。请在下方开始输入您的消息。",
        "cursor": "准备好使用带有 {{model}} 的 Cursor。请在下方开始输入您的消息。",
        "codex": "准备好使用带有 {{model}} 的 Codex。请在下方开始输入您的消息。",
-       "gemini": "准备好使用带有 {{model}} 的 Gemini。请在下方开始输入您的消息。",
-@@ -179,7 +179,7 @@
+       "default": "请在上方选择一个提供者以开始"
+@@ -177,7 +177,7 @@
      },
      "loading": "正在加载终端...",
      "connecting": "正在连接到 Shell...",
@@ -15451,10 +15825,10 @@ index 8ebe68d..56758fe 100644
      "runCommand": "在 {{projectName}} 中运行 {{command}}",
      "startCli": "在 {{projectName}} 中启动 Claude CLI",
 diff --git a/src/i18n/locales/zh-CN/common.json b/src/i18n/locales/zh-CN/common.json
-index 69cd159..eea9e34 100644
+index 7295f6b..2e43b90 100644
 --- a/src/i18n/locales/zh-CN/common.json
 +++ b/src/i18n/locales/zh-CN/common.json
-@@ -85,10 +85,10 @@
+@@ -86,10 +86,10 @@
      "openInEditor": "在编辑器中打开"
    },
    "mainContent": {
@@ -15467,7 +15841,7 @@ index 69cd159..eea9e34 100644
      "tip": "提示",
      "createProjectMobile": "点击上方的菜单按钮以访问项目",
      "createProjectDesktop": "点击侧边栏中的文件夹图标以创建新项目",
-@@ -186,9 +186,9 @@
+@@ -187,9 +187,9 @@
        "usingProvidedToken": "使用提供的令牌",
        "noAuthentication": "无身份验证",
        "sshKey": "SSH 密钥",
@@ -15480,10 +15854,10 @@ index 69cd159..eea9e34 100644
      },
      "buttons": {
 diff --git a/src/i18n/locales/zh-CN/settings.json b/src/i18n/locales/zh-CN/settings.json
-index 5567695..f6454f1 100644
+index 381c10b..254917e 100644
 --- a/src/i18n/locales/zh-CN/settings.json
 +++ b/src/i18n/locales/zh-CN/settings.json
-@@ -279,7 +279,7 @@
+@@ -277,7 +277,7 @@
      "apiDocsLink": "API 文档",
      "documentation": {
        "title": "外部 API 文档",
@@ -15492,16 +15866,16 @@ index 5567695..f6454f1 100644
        "viewLink": "查看 API 文档 →"
      },
      "loading": "加载中...",
-@@ -318,7 +318,7 @@
+@@ -316,7 +316,7 @@
      },
      "account": {
        "claude": {
 -        "description": "Anthropic Claude AI 助手"
-+        "description": "Anthropic iGemini AI 助手"
++        "description": "iGemini AI 助手"
        },
        "cursor": {
          "description": "Cursor AI 驱动的代码编辑器"
-@@ -420,7 +420,7 @@
+@@ -415,7 +415,7 @@
    "mcpServers": {
      "title": "MCP 服务器",
      "description": {
@@ -15511,7 +15885,7 @@ index 5567695..f6454f1 100644
        "codex": "Model Context Protocol 服务器为 Codex 提供额外的工具和数据源"
      },
 diff --git a/src/i18n/locales/zh-CN/sidebar.json b/src/i18n/locales/zh-CN/sidebar.json
-index a04b5f0..409b2d9 100644
+index e5f4e26..cc0ccd8 100644
 --- a/src/i18n/locales/zh-CN/sidebar.json
 +++ b/src/i18n/locales/zh-CN/sidebar.json
 @@ -13,14 +13,14 @@
@@ -15545,7 +15919,7 @@ index 02cfed8..239424c 100644
      "password": "密碼",
      "submit": "登入",
 diff --git a/src/i18n/locales/zh-TW/chat.json b/src/i18n/locales/zh-TW/chat.json
-index 1440bd5..3419480 100644
+index 4474d7e..d629c0c 100644
 --- a/src/i18n/locales/zh-TW/chat.json
 +++ b/src/i18n/locales/zh-TW/chat.json
 @@ -15,7 +15,7 @@
@@ -15555,9 +15929,9 @@ index 1440bd5..3419480 100644
 -    "claude": "Claude",
 +    "claude": "iGemini",
      "cursor": "Cursor",
-     "codex": "Codex",
-     "gemini": "Gemini"
-@@ -55,8 +55,8 @@
+     "codex": "Codex"
+   },
+@@ -54,8 +54,8 @@
    "interactive": {
      "title": "互動式提示",
      "waiting": "等待您在 CLI 中回應",
@@ -15568,7 +15942,7 @@ index 1440bd5..3419480 100644
      "instructionDetail": "在 CLI 中，您可以使用方向鍵或輸入數字來互動式地選擇此選項。"
    },
    "thinking": {
-@@ -83,7 +83,7 @@
+@@ -82,7 +82,7 @@
      "title": "實作計畫"
    },
    "usageLimit": {
@@ -15577,7 +15951,7 @@ index 1440bd5..3419480 100644
    },
    "codex": {
      "permissionMode": "權限模式",
-@@ -123,14 +123,14 @@
+@@ -122,14 +122,14 @@
    "thinkingMode": {
      "selector": {
        "title": "思考模式",
@@ -15594,7 +15968,7 @@ index 1440bd5..3419480 100644
          "prefix": ""
        },
        "think": {
-@@ -167,7 +167,7 @@
+@@ -166,7 +166,7 @@
        "google": "由 Google 提供"
      },
      "readyPrompt": {
@@ -15602,8 +15976,8 @@ index 1440bd5..3419480 100644
 +      "claude": "準備好使用 {{model}} 的 iGemini。請在下方開始輸入您的訊息。",
        "cursor": "準備好使用 {{model}} 的 Cursor。請在下方開始輸入您的訊息。",
        "codex": "準備好使用 {{model}} 的 Codex。請在下方開始輸入您的訊息。",
-       "gemini": "準備好使用 {{model}} 的 Gemini。請在下方開始輸入您的訊息。",
-@@ -215,7 +215,7 @@
+       "default": "請在上方選擇一個提供者以開始"
+@@ -213,7 +213,7 @@
      },
      "loading": "正在載入終端機...",
      "connecting": "正在連線到 Shell...",
@@ -15613,10 +15987,10 @@ index 1440bd5..3419480 100644
      "runCommand": "在 {{projectName}} 中執行 {{command}}",
      "startCli": "在 {{projectName}} 中啟動 Claude CLI",
 diff --git a/src/i18n/locales/zh-TW/common.json b/src/i18n/locales/zh-TW/common.json
-index 419be28..1951c29 100644
+index 1365ce4..79270e3 100644
 --- a/src/i18n/locales/zh-TW/common.json
 +++ b/src/i18n/locales/zh-TW/common.json
-@@ -85,10 +85,10 @@
+@@ -86,10 +86,10 @@
      "openInEditor": "在編輯器中開啟"
    },
    "mainContent": {
@@ -15629,7 +16003,7 @@ index 419be28..1951c29 100644
      "tip": "提示",
      "createProjectMobile": "點擊上方的選單按鈕以存取專案",
      "createProjectDesktop": "點擊側邊欄中的資料夾圖示以建立新專案",
-@@ -186,9 +186,9 @@
+@@ -187,9 +187,9 @@
        "usingProvidedToken": "使用提供的權杖",
        "noAuthentication": "無身分驗證",
        "sshKey": "SSH 金鑰",
@@ -15642,10 +16016,10 @@ index 419be28..1951c29 100644
      },
      "buttons": {
 diff --git a/src/i18n/locales/zh-TW/settings.json b/src/i18n/locales/zh-TW/settings.json
-index 4fe469b..dc3d906 100644
+index 5fffcd6..7beefe8 100644
 --- a/src/i18n/locales/zh-TW/settings.json
 +++ b/src/i18n/locales/zh-TW/settings.json
-@@ -279,7 +279,7 @@
+@@ -277,7 +277,7 @@
      "apiDocsLink": "API 文件",
      "documentation": {
        "title": "外部 API 文件",
@@ -15654,16 +16028,16 @@ index 4fe469b..dc3d906 100644
        "viewLink": "查看 API 文件 →"
      },
      "loading": "載入中...",
-@@ -318,7 +318,7 @@
+@@ -316,7 +316,7 @@
      },
      "account": {
        "claude": {
 -        "description": "Anthropic Claude AI 助手"
-+        "description": "Anthropic iGemini AI 助手"
++        "description": "iGemini AI 助手"
        },
        "cursor": {
          "description": "Cursor AI 驅動的程式碼編輯器"
-@@ -420,7 +420,7 @@
+@@ -415,7 +415,7 @@
    "mcpServers": {
      "title": "MCP 伺服器",
      "description": {
@@ -15673,7 +16047,7 @@ index 4fe469b..dc3d906 100644
        "codex": "Model Context Protocol 伺服器為 Codex 提供額外的工具和資料來源"
      },
 diff --git a/src/i18n/locales/zh-TW/sidebar.json b/src/i18n/locales/zh-TW/sidebar.json
-index ea39240..1e3a74e 100644
+index c249199..ae0a46c 100644
 --- a/src/i18n/locales/zh-TW/sidebar.json
 +++ b/src/i18n/locales/zh-TW/sidebar.json
 @@ -13,14 +13,14 @@

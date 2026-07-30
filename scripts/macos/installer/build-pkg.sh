@@ -8,7 +8,7 @@
 #   PROXY=http://127.0.0.1:7897 bash build-pkg.sh arm64    # Apple Silicon 包
 #   PROXY=http://127.0.0.1:7897 bash build-pkg.sh x64      # Intel 包
 #
-#   外网二进制（github/codeload/googleapis/python-build-standalone）经 PROXY（默认本机代理 7897）；
+#   外网二进制（github/codeload/googleapis/python-build-standalone）可经显式 PROXY；
 #   node/npm/pip 走国内镜像（npmmirror / 清华），免翻墙。
 #   产物：out/iGemini-Installer-<arch>-v<version>.pkg（版本号取自 installer/VERSION；已 gitignore，不入库）。
 # ============================================================================
@@ -23,6 +23,14 @@ esac
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/../../.." && pwd)"
+CLAUDE_CODE_VERSION="$(tr -d '\r\n' < "$REPO/scripts/common/CLAUDE_CODE_VERSION")"
+CLAUDE_VERIFIER="$REPO/scripts/common/verify-claude-code.mjs"
+CLAUDE_SANITIZER="$REPO/scripts/common/sanitize-claude-state.mjs"
+PRODUCT_IDENTITY_PATCH="$REPO/scripts/common/patch-cloudcli-product-identity.py"
+PRODUCT_SYSTEM_PROMPT="$REPO/scripts/common/igemini-system-prompt.md"
+SHELL_IDENTITY_PATCH="$REPO/scripts/common/patch-cloudcli-shell-identity.py"
+SINGLE_PROVIDER_PATCH="$REPO/scripts/common/patch-cloudcli-single-provider.py"
+RUNTIME_PRUNER="$REPO/scripts/common/prune-cloudcli-runtime.mjs"
 # 构建工作目录放无空格路径（node-gyp 源码编译遇路径空格会失败；本仓在 "Claude Code/" 下有空格）
 WORK="${IGBUILD_WORK:-/tmp/igbuild}/$ARCH"
 CACHE="$WORK/cache"; STAGE="$WORK/staging"; PKGROOT="$WORK/pkgroot"; OUT="$HERE/out"
@@ -30,7 +38,7 @@ PX="${PROXY:-}"
 PATCH="$REPO/vendor/igemini-claudecodeui.patch"
 ICON="$REPO/assets/igemini-icon.png"
 CCUI_REPO="siteboon/claudecodeui"
-CCUI_COMMIT="4712431be81718dfb559ef43d7d7d5315bf4e01a"
+CCUI_COMMIT="27eaf0146a46aa8a55178f3d394360ff7465420f"
 NODE_CDN="https://cdn.npmmirror.com/binaries/node"
 NPM_MIRROR="https://registry.npmmirror.com"
 PIP_MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
@@ -39,22 +47,46 @@ say(){ printf '\n\033[1;36m== %s ==\033[0m\n' "$*"; }
 ok(){  printf '  \033[0;32m✓\033[0m %s\n' "$*"; }
 die(){ printf '  \033[0;31m✗ %s\033[0m\n' "$*"; exit 1; }
 arch_of(){ file "$1" 2>/dev/null | grep -oE 'arm64|x86_64' | head -1; }
-# 从 github 下载：国内镜像直连优先（避开代理对 github 的 SSL 重置），代理直连兜底
+# 从 GitHub 下载：先让系统网络自行路由（可命中 Clash TUN），再用显式 7897 兜底，
+# 最后尝试公共镜像。下载只写 .part，完成后原子改名。
 GHMIRRORS=( "https://ghfast.top/" "https://gh-proxy.com/" "https://github.moeyy.xyz/" "https://ghproxy.net/" )
 dlgh(){  # $1=github完整URL  $2=目标文件
-  local url="$1" dest="$2" m
+  local url="$1" dest="$2" part="${2}.part" m
+  if curl --connect-timeout 20 -m 1800 -fsSL -C - --retry 2 --retry-all-errors --retry-delay 2 \
+      --http1.1 -o "$part" "$url" 2>/dev/null \
+      && [ -s "$part" ]; then
+    mv "$part" "$dest"; echo "    (via 系统网络)"; return 0
+  fi
+  if [ -n "$PX" ]; then
+    curl --connect-timeout 30 -m 1800 -fsSL -C - --retry 2 --retry-all-errors --retry-delay 2 \
+      --http1.1 -x "$PX" -o "$part" "$url" 2>/dev/null \
+      && [ -s "$part" ] && { mv "$part" "$dest"; echo "    (via 代理直连)"; return 0; }
+    rm -f "$part"
+  fi
+  rm -f "$part"
   for m in "${GHMIRRORS[@]}"; do
-    curl -m 240 -fsSL --retry 3 --retry-all-errors --http1.1 -o "$dest" "${m}${url}" 2>/dev/null && [ -s "$dest" ] && { printf '    (via %s)\n' "$m"; return 0; }
+    curl --connect-timeout 20 -m 600 -fsSL --retry 1 --retry-all-errors --retry-delay 2 \
+      --http1.1 -o "$part" "${m}${url}" 2>/dev/null \
+      && [ -s "$part" ] && { mv "$part" "$dest"; printf '    (via %s)\n' "$m"; return 0; }
+    rm -f "$part"
   done
-  curl -m 240 -fsSL --retry 4 --retry-all-errors --http1.1 ${PX:+-x "$PX"} -o "$dest" "$url" 2>/dev/null && [ -s "$dest" ] && { echo "    (via 代理直连)"; return 0; }
   return 1
 }
+valid_zip(){ unzip -tq "$1" >/dev/null 2>&1; }
+valid_tgz(){ tar -tzf "$1" >/dev/null 2>&1; }
 # 固定版本（避开 api.github.com 调用；可按需更新）
 PANDOC_VER="3.10"; PY_TAG="20260623"; PY_VER="3.12.13"
 MKVER="$(tr -d ' \t\r\n' < "$HERE/VERSION" 2>/dev/null)"; [ -n "$MKVER" ] || MKVER="1.0.0"   # 用户可见版本(单一真源: installer/VERSION)——贯穿 关于面板 / Info.plist / 包名
 VER="$MKVER.$(date +%Y%m%d%H%M%S)"   # pkg 内部版本 = 营销版本.秒级时间戳 → 每次构建递增、绝不撞版本；安装器把每次安装都当新版本完整铺 payload（避免同版本重装跳过文件）
 
 [ -f "$PATCH" ] || die "缺白标 patch: $PATCH"
+[ -f "$CLAUDE_VERIFIER" ] || die "缺 Claude 完整性校验器: $CLAUDE_VERIFIER"
+[ -f "$CLAUDE_SANITIZER" ] || die "缺 Claude 状态清理器: $CLAUDE_SANITIZER"
+[ -f "$PRODUCT_IDENTITY_PATCH" ] || die "缺产品身份注入补丁: $PRODUCT_IDENTITY_PATCH"
+[ -s "$PRODUCT_SYSTEM_PROMPT" ] || die "缺 iGemini 产品身份 prompt: $PRODUCT_SYSTEM_PROMPT"
+[ -f "$SHELL_IDENTITY_PATCH" ] || die "缺 Shell 身份注入补丁: $SHELL_IDENTITY_PATCH"
+[ -f "$SINGLE_PROVIDER_PATCH" ] || die "缺单助手产品补丁: $SINGLE_PROVIDER_PATCH"
+[ -f "$RUNTIME_PRUNER" ] || die "缺 CloudCLI 运行时裁剪器: $RUNTIME_PRUNER"
 command -v xcrun >/dev/null || die "缺 Xcode CLT(clang)"
 mkdir -p "$CACHE" "$STAGE" "$OUT"
 
@@ -76,40 +108,40 @@ ok "$NF  arch=$(arch_of "$STAGE/runtime/node/bin/node")"
 # ---- 2) claude（目标 arch；封闭装、非 -g）----
 say "2/12 Claude Code CLI（darwin-${NODE_ARCH}）"
 rm -rf "$STAGE/claude-pkg"; mkdir -p "$STAGE/claude-pkg"
-env "${NPMENV[@]}" npm install --prefix "$STAGE/claude-pkg" --cpu "$NODE_ARCH" --os darwin @anthropic-ai/claude-code >/dev/null
+env "${NPMENV[@]}" npm install --prefix "$STAGE/claude-pkg" --cpu "$NODE_ARCH" --os darwin "@anthropic-ai/claude-code@$CLAUDE_CODE_VERSION" >/dev/null
 CLBIN=$(find "$STAGE/claude-pkg/node_modules/@anthropic-ai" -path "*darwin-$NODE_ARCH*/claude" -type f | head -1)
 [ -n "$CLBIN" ] || die "没装到 claude-code-darwin-$NODE_ARCH 二进制"
-ok "claude 二进制 arch=$(arch_of "$CLBIN")"
+CLAUDE_VERIFY_ARGS=(
+  --package-root "$STAGE/claude-pkg/node_modules/@anthropic-ai/claude-code"
+  --binary "$CLBIN" --platform "darwin-$NODE_ARCH"
+  --require-binary-sha256
+)
+node "$CLAUDE_VERIFIER" "${CLAUDE_VERIFY_ARGS[@]}" || die "Claude Code 固定版本/哈希校验失败"
+ok "claude $CLAUDE_CODE_VERSION 二进制 arch=$(arch_of "$CLBIN")（已按审计清单校验）"
 
-if [ -d "$STAGE/claudecodeui/dist-server" ]; then ok "claudecodeui 已构建，复用（跳过 3-5）"; else
+BUILD_FINGERPRINT="$(shasum -a 256 "$PATCH" "$REPO/scripts/common/patch-cloudcli-claude-config.py" \
+  "$PRODUCT_IDENTITY_PATCH" "$PRODUCT_SYSTEM_PROMPT" "$SHELL_IDENTITY_PATCH" "$SINGLE_PROVIDER_PATCH" \
+  "$RUNTIME_PRUNER" "$HERE/build-pkg.sh" | shasum -a 256 | awk '{print $1}')"
+if [ -d "$STAGE/claudecodeui/dist-server" ] \
+   && [ "$(cat "$STAGE/claudecodeui/.igemini-build-fingerprint" 2>/dev/null || true)" = "$BUILD_FINGERPRINT" ]; then
+  ok "claudecodeui 构建指纹匹配，复用（跳过 3-5）"
+else
 # ---- 3) claudecodeui 源码（codeload tarball 经代理 + 套白标 patch）----
 say "3/12 claudecodeui 源码 + 白标 patch"
 TGZ="$CACHE/ccui.tgz"
+[ -f "$TGZ" ] && ! valid_tgz "$TGZ" && rm -f "$TGZ"
 [ -f "$TGZ" ] || dlgh "https://github.com/$CCUI_REPO/archive/$CCUI_COMMIT.tar.gz" "$TGZ" || die "claudecodeui 源码下载失败（镜像+代理都不通）"
 tar -tzf "$TGZ" 2>/dev/null | grep -q package.json || die "claudecodeui 压缩包无效"
 rm -rf "$STAGE/claudecodeui"; mkdir -p "$STAGE/claudecodeui"
 tar -xzf "$TGZ" -C "$STAGE/claudecodeui" --strip-components=1
 ( cd "$STAGE/claudecodeui" && git init -q && git apply --binary "$PATCH" )
-# bug#1 修（macOS 专属，不碰共享 patch）：让 claudecodeui 的会话发现/命名认 CLAUDE_CONFIG_DIR。
-# 否则 macOS 隔离（CLAUDE_CONFIG_DIR=~/.claude-igemini）下，claudecodeui 仍读 homedir/.claude → 取不到会话名 → 侧栏全 "New Session"。
-python3 - "$STAGE/claudecodeui/server" <<'PY'
-import sys, os
-base = sys.argv[1]
-edits = {
-  'modules/providers/list/claude/claude-session-synchronizer.provider.ts':
-    ("path.join(os.homedir(), '.claude')",
-     "(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'))"),
-  'modules/providers/services/sessions-watcher.service.ts':
-    ("path.join(os.homedir(), '.claude', 'projects')",
-     "path.join(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'), 'projects')"),
-}
-for rel,(old,new) in edits.items():
-    p = os.path.join(base, rel); s = open(p, encoding='utf-8').read()
-    assert old in s, "CLAUDE_CONFIG_DIR 补丁模式没找到（上游可能变了）: "+rel
-    open(p,'w',encoding='utf-8').write(s.replace(old, new, 1))
-print("已让 synchronizer + watcher 认 CLAUDE_CONFIG_DIR")
-PY
-ok "已套白标 patch（$(grep -m1 '"name"' "$STAGE/claudecodeui/package.json" | grep -oE '@[^"]+')） + CLAUDE_CONFIG_DIR 修复"
+# iGemini 隔离补丁（不进共享白标 patch）：让 CloudCLI 所有直接读取的 Claude
+# session/auth/skills/MCP/agent 路径都跟随 CLAUDE_CONFIG_DIR。
+python3 "$REPO/scripts/common/patch-cloudcli-claude-config.py" "$STAGE/claudecodeui"
+python3 "$PRODUCT_IDENTITY_PATCH" "$STAGE/claudecodeui"
+python3 "$SHELL_IDENTITY_PATCH" "$STAGE/claudecodeui"
+python3 "$SINGLE_PROVIDER_PATCH" "$STAGE/claudecodeui"
+ok "已套白标 + CLAUDE_CONFIG_DIR + 原生产品身份 + iGemini 单助手产品补丁"
 
 # ---- 4) npm ci（按构建机 arch 装；保证 build 工具 rollup/vite/esbuild 可在构建机上跑）----
 say "4/12 npm ci"
@@ -118,7 +150,8 @@ ok "依赖装好（构建机 arch；运行时原生模块稍后重建为目标 a
 
 # ---- 5) build（构建机 arch 工具）+ 运行时原生重建为目标 arch + bypass + 标题 + prune ----
 say "5/12 build + 原生重建(${NODE_ARCH}) + 补丁 + prune"
-( cd "$STAGE/claudecodeui" && env "${NPMENV[@]}" ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm run build >/dev/null )
+( cd "$STAGE/claudecodeui" && env "${NPMENV[@]}" ELECTRON_SKIP_BINARY_DOWNLOAD=1 \
+    VITE_IGEMINI_VERSION="$MKVER" npm run build >/dev/null )
 if [ "$NODE_ARCH" != "arm64" ]; then   # 构建机=arm64；目标非 arm64 → 把运行时原生模块(node-pty/better-sqlite3/bcrypt 等)重建为目标 arch
   ( cd "$STAGE/claudecodeui" && env "${NPMENV[@]}" \
       npm_config_arch="$NODE_ARCH" npm_config_target_arch="$NODE_ARCH" npm_config_nodedir="$STAGE/runtime/node" \
@@ -127,6 +160,12 @@ if [ "$NODE_ARCH" != "arm64" ]; then   # 构建机=arm64；目标非 arm64 → �
   BCR=$(find "$STAGE/claudecodeui/node_modules/bcrypt" -name "*.node" 2>/dev/null | head -1)
   ok "运行时原生重建 → better-sqlite3:$(arch_of "$SQL")  bcrypt:$(arch_of "$BCR")"
 fi
+# @vscode/ripgrep 的 postinstall 会保留已有 host-arch bin；强制按目标架构重取，
+# 防止 Apple Silicon 构建 x64 包时把 arm64 rg 装进 Intel installer。
+( cd "$STAGE/claudecodeui/node_modules/@vscode/ripgrep" && env \
+    npm_config_arch="$NODE_ARCH" HTTPS_PROXY="$PX" HTTP_PROXY="$PX" \
+    node lib/postinstall.js --force >/dev/null )
+ok "ripgrep 已按目标架构重装 → $(arch_of "$STAGE/claudecodeui/node_modules/@vscode/ripgrep/bin/rg")"
 python3 - "$STAGE/claudecodeui/dist-server/server/claude-sdk.js" <<'PY'
 import sys; f=sys.argv[1]; s=open(f,encoding="utf-8").read()
 old="if (settings.skipPermissions && permissionMode !== 'plan') {"
@@ -134,44 +173,9 @@ new="if (permissionMode !== 'plan') { // [iGemini] always bypass permissions (ma
 if "[iGemini] always bypass" not in s and old in s:
     open(f,"w",encoding="utf-8").write(s.replace(old,new))
 PY
-# bug#1 watcher 回归修复（绿点/loading）：广播 session_upserted 前跳过【正在运行】的会话。
-# bug#1 让 watcher 真去监 ~/.claude-igemini 后，聊天时它会对【正在跑的当前会话】广播一个不含运行态、
-# messageCount=0 的 upsert → 冲掉前端的绿点/loading（卡死/错乱）。上游注释自承"无运行中抑制"，
-# 该假设对【当前正在跑的会话本身】不成立；这里用 claude-sdk 的 isClaudeSDKSessionActive 补上抑制。
-python3 - "$STAGE/claudecodeui/dist-server/server/modules/providers/services/sessions-watcher.service.js" <<'PY'
-import sys; p=sys.argv[1]; s=open(p,encoding="utf-8").read()
-imp="import { generateDisplayName } from '../../../modules/projects/index.js';"
-loop="for (const updatedSessionId of queuedUpdate.updatedSessionIds) {"
-assert imp in s and loop in s, "watcher 锚点没找到（上游可能变了）"
-if "isClaudeSDKSessionActive" not in s:
-    s=s.replace(imp, imp+"\nimport { isClaudeSDKSessionActive } from '../../../claude-sdk.js';",1)
-if "isClaudeSDKSessionActive(updatedSessionId)" not in s:
-    s=s.replace(loop, loop+"\n            if (isClaudeSDKSessionActive(updatedSessionId)) { continue; } // [iGemini] 正在跑的会话别广播 upsert，避免冲掉运行态(绿点/loading)",1)
-open(p,"w",encoding="utf-8").write(s)
-print("watcher suppress-active 修复已套")
-PY
-# [iGemini] Shell 终端免权限：buildShellCommand 拼的 claude 命令（新会话 / unix恢复 / win恢复，共 3 条）
-# 都没带 --dangerously-skip-permissions → Shell 终端里跑 claude 会不停问权限（Chat 走 SDK 已 bypass，
-# 唯独 Shell 这条漏了；全库审计确认 claude 仅经 SDK 与此 pty-shell 两路，故只此 3 条需补）。
-python3 - "$STAGE/claudecodeui/dist-server/server/modules/websocket/services/shell-websocket.service.js" <<'PY'
-import sys; p=sys.argv[1]; s=open(p,encoding="utf-8").read()
-F=" --dangerously-skip-permissions"
-reps=[
- ("const command = initialCommand || 'claude';",
-  "const command = initialCommand || 'claude"+F+"';"),
- ('claude --resume "${resumeSessionId}"; if ($LASTEXITCODE -ne 0) { claude }',
-  'claude'+F+' --resume "${resumeSessionId}"; if ($LASTEXITCODE -ne 0) { claude'+F+' }'),
- ('claude --resume "${resumeSessionId}" || claude',
-  'claude'+F+' --resume "${resumeSessionId}" || claude'+F),
-]
-if "[iGemini] shell bypass" not in s:
-    for old,new in reps:
-        assert old in s, "shell bypass 锚点没找到（上游可能变了）: "+old[:42]
-        s=s.replace(old,new,1)
-    s=s.replace("function buildShellCommand","// [iGemini] shell bypass\nfunction buildShellCommand",1)
-    open(p,"w",encoding="utf-8").write(s)
-    print("shell-websocket claude bypass 已套（Shell 终端免权限）")
-PY
+grep -Fq "[iGemini] Claude shell identity + bypass" \
+  "$STAGE/claudecodeui/dist-server/server/modules/websocket/services/shell-websocket.service.js" \
+  || die "Shell 原生身份/免权限补丁未进入编译产物"
 # JWT 有效期 7d → 3650d：壳只在启动时自动登录一次、不续签，7 天后 token 过期 → 聊天 WS 鉴权失败。
 # 本机 / 固定账号 iGemini/iGemini 场景下长效 token 无实际危害；将来做远程鉴权改造时再收回。
 python3 - "$STAGE/claudecodeui/dist-server/server/middleware/auth.js" <<'PY'
@@ -181,11 +185,15 @@ if "expiresIn: '3650d'" not in s and "expiresIn: '7d'" in s:
 PY
 sed -i '' 's|<title>CloudCLI UI</title>|<title>iGemini</title>|' "$STAGE/claudecodeui/dist/index.html" "$STAGE/claudecodeui/index.html" 2>/dev/null || true
 ( cd "$STAGE/claudecodeui" && env "${NPMENV[@]}" npm prune --omit=dev >/dev/null 2>&1 || true )
-ok "dist + dist-server 就绪，已 bypass/标题/prune"
+node "$RUNTIME_PRUNER" --root "$STAGE/claudecodeui" --platform darwin --arch "$NODE_ARCH" \
+  --runtime-node "$STAGE/runtime/node/bin/node" >/dev/null
+printf '%s\n' "$BUILD_FINGERPRINT" > "$STAGE/claudecodeui/.igemini-build-fingerprint"
+ok "dist + dist-server 就绪；单助手模式 + 目标架构运行时白名单已验证"
 fi
 
 # ---- 6) pandoc（目标 arch）----
 say "6/12 pandoc $PANDOC_VER"
+[ -f "$CACHE/pandoc.zip" ] && ! valid_zip "$CACHE/pandoc.zip" && rm -f "$CACHE/pandoc.zip"
 [ -f "$CACHE/pandoc.zip" ] || dlgh "https://github.com/jgm/pandoc/releases/download/$PANDOC_VER/pandoc-$PANDOC_VER-$PANDOC_ARCH-macOS.zip" "$CACHE/pandoc.zip" || die "pandoc 下载失败（镜像+代理都不通）"
 rm -rf "$CACHE/pdx"; mkdir -p "$CACHE/pdx" "$STAGE/bin"; unzip -oq "$CACHE/pandoc.zip" -d "$CACHE/pdx"
 cp "$(find "$CACHE/pdx" -name pandoc -type f -perm +111 | head -1)" "$STAGE/bin/pandoc"; chmod +x "$STAGE/bin/pandoc"
@@ -193,6 +201,7 @@ ok "pandoc $PANDOC_VER  arch=$(arch_of "$STAGE/bin/pandoc")"
 
 # ---- 7) python-build-standalone（目标 arch）+ pip 依赖 ----
 say "7/12 python $PY_VER + 五大能力依赖"
+[ -f "$CACHE/python.tgz" ] && ! valid_tgz "$CACHE/python.tgz" && rm -f "$CACHE/python.tgz"
 [ -f "$CACHE/python.tgz" ] || dlgh "https://github.com/astral-sh/python-build-standalone/releases/download/$PY_TAG/cpython-$PY_VER+$PY_TAG-$PY_ARCH-apple-darwin-install_only.tar.gz" "$CACHE/python.tgz" || die "python 下载失败（镜像+代理都不通）"
 rm -rf "$STAGE/python"; mkdir -p "$STAGE/python"; tar -xzf "$CACHE/python.tgz" -C "$STAGE/python" --strip-components=1
 "$STAGE/python/bin/python3" -m pip install --no-warn-script-location --disable-pip-version-check --only-binary=:all: -i "$PIP_MIRROR" \
@@ -217,12 +226,14 @@ ok "壳 arch=$(arch_of "$APP/Contents/MacOS/iGemini")  已 ad-hoc 签名"
 say "9/12 chrome-headless-shell（mac-${CHROME_ARCH}）"
 CURL2=$(curl -m 30 -fsSL --retry 6 --retry-all-errors --retry-delay 3 --http1.1 ${PX:+-x "$PX"} https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json \
   | /usr/bin/python3 -c "import json,sys;d=json.load(sys.stdin);print([x['url'] for x in d['channels']['Stable']['downloads']['chrome-headless-shell'] if x['platform']=='mac-$CHROME_ARCH'][0])")
-# chrome-headless-shell ~95MB：优先 npmmirror 镜像（国内直连、免代理、快），失败再 googleapis 经代理；
-# 均带 -C - 断点续传 + 下到 .part 再改名（弱网/代理下大文件靠续传兜底，半截文件不会被当成已下好）
-CHS_MIRROR=$(printf '%s' "$CURL2" | sed 's#https://storage.googleapis.com/chrome-for-testing-public/#https://cdn.npmmirror.com/binaries/chrome-for-testing/#')
-if [ ! -s "$CACHE/chs.zip" ]; then
-  curl -C - -m 600 -fsSL --retry 6 --retry-all-errors --retry-delay 3 --http1.1 -o "$CACHE/chs.zip.part" "$CHS_MIRROR" \
-    || curl -C - -m 600 -fsSL --retry 6 --retry-all-errors --retry-delay 3 --http1.1 ${PX:+-x "$PX"} -o "$CACHE/chs.zip.part" "$CURL2"
+[ -f "$CACHE/chs.zip" ] && ! valid_zip "$CACHE/chs.zip" && rm -f "$CACHE/chs.zip"
+if [ ! -f "$CACHE/chs.zip" ]; then
+  # Google Storage 在国内常可直连，显式代理反而可能更慢；直连失败才走 7897。
+  if ! curl --connect-timeout 30 -m 1800 -fsSL -C - --retry 2 --retry-all-errors --retry-delay 3 \
+      --http1.1 -o "$CACHE/chs.zip.part" "$CURL2"; then
+    curl --connect-timeout 30 -m 1800 -fsSL -C - --retry 6 --retry-all-errors --retry-delay 3 \
+      --http1.1 ${PX:+-x "$PX"} -o "$CACHE/chs.zip.part" "$CURL2"
+  fi
   mv "$CACHE/chs.zip.part" "$CACHE/chs.zip"
 fi
 rm -rf "$STAGE/chromium"; mkdir -p "$STAGE/chromium"; unzip -oq "$CACHE/chs.zip" -d "$STAGE/chromium"
@@ -235,6 +246,8 @@ say "10/12 工具 + 启动器 + 配置"
 mkdir -p "$STAGE/tools"; cp "$HERE/src/tools/"*.py "$STAGE/tools/"
 ( cd "$STAGE/tools"; for t in parsedoc websearch describe-image md2docx md2pdf; do ln -sf "$t.py" "$t"; done ); chmod +x "$STAGE/tools/"*.py
 cp "$HERE/src/start-web.sh" "$STAGE/start-web.sh"; chmod +x "$STAGE/start-web.sh"
+cp "$CLAUDE_SANITIZER" "$STAGE/sanitize-claude-state.mjs"; chmod +x "$STAGE/sanitize-claude-state.mjs"
+cp "$PRODUCT_SYSTEM_PROMPT" "$STAGE/igemini-system-prompt.md"
 cp "$HERE/src/CLAUDE.md" "$STAGE/CLAUDE.md"
 cp "$HERE/src/com.igemini.web.plist" "$STAGE/com.igemini.web.plist"
 rm -rf "$STAGE/runtime/node/include" "$STAGE/runtime/node/lib/node_modules/npm" "$STAGE/runtime/node/lib/node_modules/corepack" \
@@ -243,25 +256,27 @@ ok "工具/启动器就位，node 瘦身"
 
 # ---- 10.5) 法务件（AGPL 合规）----
 # claudecodeui(siteboon) 是 AGPL-3.0，我们改了它（白标 patch）→ 分发这个二进制包时，
-# 必须随附【许可证全文】+【我们改动的对应源码】+【重建说明】。与 Windows 包的 legal/ 对齐。
-# 大陆访问不了 gnu.org / GitHub，所以许可证正文和 patch 都必须【随包带】，不能只给 URL。
+# 必须随附【许可证全文】+【对应源码获取方式】+【重建说明】。与 Windows 包的 legal/ 对齐。
+# 许可证正文和共享白标 patch 随包携带；修改/构建源码固定到 release tag，完整对应源码包同版发布。
 say "10.5/12 法务件（AGPL 合规）"
 mkdir -p "$STAGE/legal"
 cp "$PATCH" "$STAGE/legal/igemini-claudecodeui.patch"
 cp "$HERE/resources/LICENSE.txt" "$STAGE/legal/LICENSE-AGPL-3.0.txt"   # 仓库内置的 AGPL-3.0 全文
 cat > "$STAGE/legal/SOURCE.txt" <<EOF
 iGemini 内含第三方开源组件 claudecodeui（作者 siteboon），许可证 AGPL-3.0。
-按 AGPL 要求，随二进制提供对应完整源码的获取方式：
+按 AGPL 要求，随二进制提供修改源码、构建方式和完整对应源码包的获取方式：
 
-  上游仓库    : https://github.com/${CCUI_REPO}
+  上游仓库    : https://github.com/$CCUI_REPO
   基线 commit : ${CCUI_COMMIT}
-  白标改动    : 见同目录 igemini-claudecodeui.patch
-                （克隆上游后 git checkout ${CCUI_COMMIT}，再 git apply --binary <该 patch>，
-                  即可逐字节重建本包内的 claudecodeui）
+  共享白标改动: 见同目录 igemini-claudecodeui.patch
+                 （克隆上游、checkout ${CCUI_COMMIT} 后用 git apply --binary 应用）
+  iGemini 修改与构建源码: https://github.com/DexterSLamb/iGemini/tree/v${MKVER}
+  完整对应源码包         : 同一 GitHub Release 中的
+                           iGemini-Corresponding-Source-v${MKVER}.tar.gz
 
-注：本 macOS 版在出厂构建时另有一处平台特有改动（让会话发现/命名识别 CLAUDE_CONFIG_DIR），
-    不在上面这个共享 patch 内。索取完整对应源码请访问项目主页：
-      https://github.com/DexterSLamb/iGemini
+共享 patch 只重建三平台共用的白标源码改动。对应源码包包含应用全部源码补丁后的
+完整 CloudCLI 源码树，以及上述 release tag 的 iGemini 修改与构建源码。运行其中
+scripts/macos/installer/build-pkg.sh 会应用剩余的构建期改动并组装本安装包。
 
 本目录另含 LICENSE-AGPL-3.0.txt（AGPL-3.0 许可证全文）。
 EOF
@@ -270,7 +285,7 @@ ok "legal/ 就位（AGPL 全文 + 白标 patch + SOURCE.txt）"
 # ---- 11) 组装 pkgroot + pkgbuild（latest 压缩）----
 say "11/12 pkgbuild"
 rm -rf "$PKGROOT"; mkdir -p "$PKGROOT/Applications/iGemini"
-for d in runtime claude-pkg claudecodeui python chromium bin tools legal start-web.sh CLAUDE.md com.igemini.web.plist; do
+for d in runtime claude-pkg claudecodeui python chromium bin tools legal start-web.sh sanitize-claude-state.mjs igemini-system-prompt.md CLAUDE.md com.igemini.web.plist; do
   cp -R "$STAGE/$d" "$PKGROOT/Applications/iGemini/"
 done
 cp -R "$STAGE/iGemini.app" "$PKGROOT/Applications/iGemini.app"

@@ -3,6 +3,10 @@
 # 用法：复制为 ds.sh、chmod +x；key 单独存到 ~/.config/deepseek/key（见下），然后 ./ds.sh [--flash]
 # 设计：本文件不含任何明文 key——key 与 Serper/Qwen 一样存独立文件、运行时读取。
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+export CLAUDE_CONFIG_DIR="$HOME/.claude-igemini"
+mkdir -p "$CLAUDE_CONFIG_DIR"
+
 # ===== DeepSeek 鉴权（key 存 ~/.config/deepseek/key, chmod 600；本文件绝不硬编码 key）=====
 #   首次设置： mkdir -p ~/.config/deepseek && printf '%s' '<你的 DeepSeek key sk-...>' > ~/.config/deepseek/key && chmod 600 ~/.config/deepseek/key
 export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
@@ -18,13 +22,27 @@ export ANTHROPIC_DEFAULT_HAIKU_MODEL="deepseek-v4-flash"
 export CLAUDE_CODE_SUBAGENT_MODEL="deepseek-v4-flash"
 export CLAUDE_CODE_EFFORT_LEVEL="max"
 export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1   # 关遥测/错误上报/自动更新等
+export DISABLE_GROWTHBOOK=1                         # 显式关远程实验配置（不要只依赖组合开关）
+export DISABLE_TELEMETRY=1
+export DISABLE_ERROR_REPORTING=1
+export DISABLE_INSTALLATION_CHECKS=1
+export DISABLE_AUTOUPDATER=1
+export DISABLE_UPDATES=1
+export CLAUDE_CODE_ATTRIBUTION_HEADER=0
+
+# 旧 bootstrap / GrowthBook 缓存可能继续进入 system prompt；启动前只删已知远程控制缓存。
+# 手工部署时把 scripts/common/sanitize-claude-state.mjs 与本文件放在同一目录。
+SANITIZER="$SCRIPT_DIR/sanitize-claude-state.mjs"
+[ -f "$SANITIZER" ] || { echo "缺安全清理器：$SANITIZER" >&2; exit 78; }
+node "$SANITIZER" "$CLAUDE_CONFIG_DIR" || exit 78
 
 # ===== 幂等写配置：跳过 Anthropic 登录/WebFetch 预检 =====
 command -v node >/dev/null 2>&1 && node -e '
 const fs=require("fs"),os=require("os"),p=require("path"),h=os.homedir();
+const cfg=process.env.CLAUDE_CONFIG_DIR||p.join(h,".claude-igemini");
 const set=(f,k,v)=>{let d={};try{d=JSON.parse(fs.readFileSync(f,"utf8"))}catch(e){}; if(typeof d!=="object"||!d||Array.isArray(d))d={}; if(d[k]===v)return; d[k]=v; fs.mkdirSync(p.dirname(f),{recursive:true}); fs.writeFileSync(f,JSON.stringify(d,null,2));};
-set(p.join(h,".claude.json"),"hasCompletedOnboarding",true);
-set(p.join(h,".claude","settings.json"),"skipWebFetchPreflight",true);
+set(p.join(cfg,".claude.json"),"hasCompletedOnboarding",true);
+set(p.join(cfg,"settings.json"),"skipWebFetchPreflight",true);
 ' 2>/dev/null
 
 # ===== 启动 =====
@@ -34,7 +52,7 @@ MODEL="deepseek-v4-pro[1m]"
 
 # 仅当“当前工作目录”已有历史会话才 --resume；首次无历史则新建
 # （否则 --resume 弹空列表、只能 ESC 退出）
-PROJ="$HOME/.claude/projects/$(printf '%s' "$PWD" | sed 's/[^A-Za-z0-9]/-/g')"
+PROJ="$CLAUDE_CONFIG_DIR/projects/$(printf '%s' "$PWD" | sed 's/[^A-Za-z0-9]/-/g')"
 if ls "$PROJ"/*.jsonl >/dev/null 2>&1; then
   claude --model "$MODEL" --dangerously-skip-permissions --resume
 else

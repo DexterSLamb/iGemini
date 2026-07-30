@@ -23,12 +23,29 @@ if [ -n "$CLAUDE_BIN" ]; then
   export CLAUDE_CLI_PATH="$CLAUDE_BIN"
 fi
 
-# 4) 网页服务：默认只绑本机；SERVER_PORT 避开浏览器禁用端口(如 6666)，勿用 <1024(需 root)
+# 4) 隔离 iGemini 会话/设置/部署指引，绝不写用户日常 ~/.claude
+export CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude-igemini}"
+mkdir -p "$CLAUDE_CONFIG_DIR"
+export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+export DISABLE_GROWTHBOOK=1 DISABLE_TELEMETRY=1 DISABLE_ERROR_REPORTING=1
+export DISABLE_INSTALLATION_CHECKS=1 DISABLE_AUTOUPDATER=1 DISABLE_UPDATES=1
+export CLAUDE_CODE_ATTRIBUTION_HEADER=0
+SANITIZER="${IGEMINI_CLAUDE_SANITIZER:-$HERE/../common/sanitize-claude-state.mjs}"
+[ -f "$SANITIZER" ] || SANITIZER="$HERE/sanitize-claude-state.mjs"
+[ -f "$SANITIZER" ] || { echo "安全清理器缺失: $SANITIZER" >&2; exit 78; }
+IDENTITY_PROMPT="${IGEMINI_SYSTEM_PROMPT_FILE:-$HERE/../common/igemini-system-prompt.md}"
+[ -s "$IDENTITY_PROMPT" ] || IDENTITY_PROMPT="$HERE/igemini-system-prompt.md"
+[ -s "$IDENTITY_PROMPT" ] || { echo "iGemini 产品身份 prompt 缺失: $IDENTITY_PROMPT" >&2; exit 78; }
+export IGEMINI_SYSTEM_PROMPT_FILE="$IDENTITY_PROMPT"
+node "$SANITIZER" "$CLAUDE_CONFIG_DIR" || exit 78
+
+# 5) 网页服务：默认只绑本机；SERVER_PORT 避开浏览器禁用端口(如 6666)，勿用 <1024(需 root)
 export HOST="${HOST:-127.0.0.1}"
 export SERVER_PORT="${SERVER_PORT:-8888}"
 export PIP_BREAK_SYSTEM_PACKAGES=1   # 让 pip install --user 绕过 PEP668「外部管理」(放开用户级装包)
 
 cd "$CCUI" || { echo "找不到 claudecodeui: $CCUI"; exit 1; }
 echo "后端: ${ANTHROPIC_BASE_URL:-?} | 模型: ${ANTHROPIC_MODEL:-?} | claude: ${CLAUDE_CLI_PATH:-(PATH)}"
+echo "配置: $CLAUDE_CONFIG_DIR"
 echo "监听: $HOST:$SERVER_PORT"
 exec npm run server

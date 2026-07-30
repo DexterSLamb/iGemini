@@ -1,10 +1,11 @@
 # 部署机 Claude Code 指引（模板）
 
-> 本文件的内容要放到**部署机**的 **`~/.claude/CLAUDE.md`**，
+> 本文件是旧式 macOS 手工部署的通用模板，内容应放到 iGemini 的
+> **隔离配置目录 `~/.claude-igemini/CLAUDE.md`**，
 > 供网页层 claudecodeui spawn 出来的 `claude` 读取（该 CC 用 DeepSeek 作后端，
 > 端点**只支持 text + tool_use**，不收图片/文件上传）。
-> 部署机是专用机、无"日常 CC"要隔离，故用全局 `~/.claude/CLAUDE.md`。
-> 安装：`cp config/deployed-claude-md.md ~/.claude/CLAUDE.md`（按需合并已有内容）。
+> 安装：`mkdir -p ~/.claude-igemini && cp config/deployed-claude-md.md ~/.claude-igemini/CLAUDE.md`。
+> 新安装包优先使用各平台 `scripts/<os>/deployed-claude-md.md`，本文件只保留给手工路线。
 
 ---
 

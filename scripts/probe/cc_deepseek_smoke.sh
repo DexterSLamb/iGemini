@@ -23,9 +23,20 @@ echo ""
 # --- 仅本进程环境：把 CC 指向 DeepSeek ---
 export CLAUDE_CONFIG_DIR="$CFG"
 export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
-export ANTHROPIC_API_KEY="$KEY"
-export ANTHROPIC_MODEL="deepseek-v4-pro"
-export ANTHROPIC_SMALL_FAST_MODEL="deepseek-v4-flash"
+export ANTHROPIC_AUTH_TOKEN="$KEY"
+unset ANTHROPIC_API_KEY
+export ANTHROPIC_MODEL="deepseek-v4-pro[1m]"
+export ANTHROPIC_DEFAULT_OPUS_MODEL="deepseek-v4-pro[1m]"
+export ANTHROPIC_DEFAULT_SONNET_MODEL="deepseek-v4-pro[1m]"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="deepseek-v4-flash"
+export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+export DISABLE_GROWTHBOOK=1
+export DISABLE_TELEMETRY=1
+export DISABLE_ERROR_REPORTING=1
+export DISABLE_INSTALLATION_CHECKS=1
+export DISABLE_AUTOUPDATER=1
+export DISABLE_UPDATES=1
+export CLAUDE_CODE_ATTRIBUTION_HEADER=0
 
 TASK='Use your tools to do these steps in order:
 1) Write a file a.txt containing exactly: alpha
@@ -35,11 +46,11 @@ TASK='Use your tools to do these steps in order:
 5) Read poem.txt and report its contents.
 Work only inside the current directory.'
 
-echo "=== 运行真实 Claude Code（model=deepseek-v4-pro，多步工具）==="
+echo "=== 运行真实 Claude Code（model=deepseek-v4-pro[1m]，多步工具）==="
 cd "$WORK"
 set +e
 claude -p "$TASK" \
-  --model deepseek-v4-pro \
+  --model 'deepseek-v4-pro[1m]' \
   --permission-mode bypassPermissions \
   --allowedTools Write Edit Read Bash 2>&1
 RC=$?

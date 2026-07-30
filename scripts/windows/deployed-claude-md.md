@@ -1,9 +1,9 @@
 # 部署机 Claude Code 指引（Windows 版）
 
 > ⚠️ **这是 Windows 专属的 CLAUDE.md**，与 mac/共享的 `config/deployed-claude-md.md` 各管各的（OS 隔离）。
-> 安装包会把本文件部署到 Windows 部署机的 **`%USERPROFILE%\.claude\CLAUDE.md`**，
+> 安装包会把本文件部署到 iGemini 隔离目录 **`%USERPROFILE%\.claude-igemini\CLAUDE.md`**，
 > 供网页层 claudecodeui spawn 出来的 `claude` 读取（该 CC 用 DeepSeek 作后端，
-> 端点**只支持 text + tool_use**，不收图片/文件上传）。
+> 端点**只支持 text + tool_use**，不收图片/文件上传）。用户日常 `%USERPROFILE%\.claude` 不得覆盖。
 
 ---
 

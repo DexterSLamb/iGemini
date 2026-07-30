@@ -16,17 +16,19 @@ Third-party components & corresponding source (attribution)
     Author  : siteboon
     License : AGPL-3.0
     Upstream: https://github.com/siteboon/claudecodeui
-    Baseline: commit 4712431be81718dfb559ef43d7d7d5315bf4e01a
-    Changes : vendor/igemini-claudecodeui.patch (white-labels it to iGemini)
+    Baseline: v1.36.3, commit 27eaf0146a46aa8a55178f3d394360ff7465420f
+    Changes : vendor/igemini-claudecodeui.patch contains the shared white-label
+              source changes. Additional disclosed build/runtime changes are
+              applied by scripts/common/patch-cloudcli-*.py and the platform
+              build/setup scripts under scripts/.
     Rebuild : git clone the upstream repo
-              → git checkout 4712431be81718dfb559ef43d7d7d5315bf4e01a
+              → git checkout 27eaf0146a46aa8a55178f3d394360ff7465420f
               → git apply --binary vendor/igemini-claudecodeui.patch
-              …reproduces the claudecodeui source used by the installers,
-              byte for byte.
-    Note    : Each OS has a small platform-specific factory tweak that is
-              NOT part of the shared patch (macOS: session discovery honoring
-              CLAUDE_CONFIG_DIR; Windows: permission-bypass in the compiled
-              dist-server). Ask the maintainer for that corresponding source.
+              → run the applicable public platform build/setup script.
+              The scripts apply the remaining source/runtime patches, build
+              CloudCLI, prune its runtime dependencies, and assemble iGemini.
+    Source  : All iGemini changes used to create the distributed installers
+              are included in this repository.
 
 [2] Inno Setup Simplified-Chinese translation
     File    : scripts/windows/installer/ChineseSimplified.isl
@@ -39,7 +41,9 @@ Third-party components & corresponding source (attribution)
     A stylized "assistant orb" logo. Provided as-is for this project's
     branding.
 
-[4] Runtime dependencies (invoked at runtime, NOT redistributed by this
-    repository; each under its own license): Node.js, @anthropic-ai/claude-code,
-    Python, markdown, PyMuPDF (AGPL), pdfplumber, python-docx, openpyxl,
-    pandoc (GPL), chrome-headless-shell, WebView2, WebKitGTK.
+[4] Runtime dependencies (fetched by the build/setup scripts and, where
+    applicable, bundled into release installers; not stored as binaries in
+    this Git repository; each remains under its own license): Node.js,
+    @anthropic-ai/claude-code, Python, markdown, PyMuPDF (AGPL), pdfplumber,
+    python-docx, openpyxl, pandas, pandoc (GPL), chrome-headless-shell,
+    WebView2, WebKitGTK.

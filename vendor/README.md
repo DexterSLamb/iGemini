@@ -1,29 +1,37 @@
 # vendor/
 
-## `igemini-claudecodeui.patch`
+本仓库不把 CloudCLI 源码做成 submodule，也不维护长期 fork。各平台构建脚本从官方仓库拉取固定 commit，再应用本目录中的共享白标 patch。
 
-A single git patch that white-labels **claudecodeui** (product name *CloudCLI*,
-by [siteboon](https://github.com/siteboon/claudecodeui), AGPL-3.0) into
-**iGemini**: logo / favicon / manifest icons, brand strings, i18n, and the
-provider display name.
+## iGemini 白标 patch
 
-This repository does **not** vendor claudecodeui's source — only this diff
-against a pinned upstream commit. The build scripts (`scripts/<os>/…`) fetch
-the upstream at that commit and apply the patch; the patch is **only applied,
-never forked**.
+`igemini-claudecodeui.patch` 记录跨平台共享的品牌改动：logo、favicon/PWA 图标、界面与服务端可见品牌文字、i18n 文案及 Claude provider 的 iGemini 显示名。运行时隔离、权限模式、Shell、JWT、限流和改密属于平台补丁，不混入这份共享 patch。
 
-**Apply / reproduce:**
+- 上游版本：CloudCLI `v1.36.3`
+- 上游 tag 解引用 commit：`27eaf0146a46aa8a55178f3d394360ff7465420f`
+- patch 文件数：94（含二进制图标）
+- 不含构建产物、依赖或密钥
 
-```sh
+## 复现
+
+```bash
 git clone https://github.com/siteboon/claudecodeui
 cd claudecodeui
-git checkout 4712431be81718dfb559ef43d7d7d5315bf4e01a
+git checkout 27eaf0146a46aa8a55178f3d394360ff7465420f
+git apply --check --binary ../igemini-claudecodeui.patch
 git apply --binary ../igemini-claudecodeui.patch
+npm ci
+npm run typecheck
+npm run build
 ```
 
-Because it is a derivative of an AGPL-3.0 work, this patch is itself covered
-by AGPL-3.0. See the repository-root `NOTICE` for full attribution and the
-corresponding-source statement.
+必须使用上述 commit；上游分支继续前移后，直接在最新 `main` 上应用不保证成功。若升级到新的 CloudCLI 版本，应对新 tag 逐项重放白标改动，执行品牌残留审计和完整构建，再重新生成 patch：
 
-> Each OS additionally applies a small platform-specific factory tweak that is
-> **not** part of this shared patch (see the per-OS build scripts and `NOTICE`).
+```bash
+git add -A
+git diff --cached --binary > igemini-claudecodeui.patch
+git reset
+```
+
+平台运行时补丁位于 `scripts/common/` 和各 OS 构建脚本中，不属于这份共享白标 patch。
+
+CloudCLI 及本衍生 patch 受 AGPL-3.0 约束；完整归属与对应源码说明见仓库根目录的 `NOTICE` 和 `LICENSE`。

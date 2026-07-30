@@ -25,6 +25,15 @@ jobs:
       - name: Install Inno Setup
         run: choco install innosetup -y --no-progress
 
+      - name: Verify pinned Claude security policy
+        shell: pwsh
+        run: |
+          node --check .\scripts\common\verify-claude-code.mjs
+          node --check .\scripts\common\sanitize-claude-state.mjs
+          $expected = (Get-Content .\scripts\common\CLAUDE_CODE_VERSION -Raw).Trim()
+          $manifest = Get-Content .\scripts\common\claude-code-release.json -Raw | ConvertFrom-Json
+          if ($manifest.version -ne $expected) { throw 'Claude version and release manifest disagree' }
+
       - name: Build offline installer
         shell: pwsh
         run: |

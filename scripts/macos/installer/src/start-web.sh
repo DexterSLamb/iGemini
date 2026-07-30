@@ -14,7 +14,7 @@ mkdir -p "$HOME/.claude-igemini"
 while [ ! -s "$HOME/.config/deepseek/key" ]; do sleep 1; done
 # ---- DeepSeek 后端 ----
 # base 地址【可配置】：~/.config/deepseek/base 存在则用它，否则缺省 DeepSeek 官方。
-# 为未来「切换后端」留位——届时只改这个文件的内容(地址指向新端点)，
+# 为未来切换后端留位——届时只改这个文件的内容（地址指向新端点），
 # 本地代码一行不用改、包不用重出。
 BASEF="$HOME/.config/deepseek/base"
 if [ -s "$BASEF" ]; then
@@ -33,7 +33,9 @@ export ANTHROPIC_DEFAULT_SONNET_MODEL="deepseek-v4-pro[1m]"
 export ANTHROPIC_DEFAULT_HAIKU_MODEL="deepseek-v4-flash"
 export CLAUDE_CODE_SUBAGENT_MODEL="deepseek-v4-flash"
 export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
-export DISABLE_INSTALLATION_CHECKS=1 DISABLE_AUTOUPDATER=1
+export DISABLE_GROWTHBOOK=1 DISABLE_TELEMETRY=1 DISABLE_ERROR_REPORTING=1
+export DISABLE_INSTALLATION_CHECKS=1 DISABLE_AUTOUPDATER=1 DISABLE_UPDATES=1
+export CLAUDE_CODE_ATTRIBUTION_HEADER=0
 # ---- claude 引擎 + 隔离配置目录(与日常 claude 互不犯)----
 # 直接指平台二进制（claude-code-darwin-<arch>/claude），绕开 .bin/claude launcher
 # —— 该 launcher 依赖 postinstall 布置，跨 arch（--cpu x64 在 arm64 机上）装会失败 → spawn ENOEXEC
@@ -41,6 +43,14 @@ export CLAUDE_CLI_PATH="$(ls "$IG"/claude-pkg/node_modules/@anthropic-ai/claude-
 # bug#2 修：把 claude 二进制目录加进 PATH —— 否则集成终端(Shell 标签)按名字敲 `claude` 找不到（command not found / exit 127）
 [ -n "$CLAUDE_CLI_PATH" ] && export PATH="$(dirname "$CLAUDE_CLI_PATH"):$PATH"
 export CLAUDE_CONFIG_DIR="$HOME/.claude-igemini"
+export IGEMINI_SYSTEM_PROMPT_FILE="$IG/igemini-system-prompt.md"
+[ -s "$IGEMINI_SYSTEM_PROMPT_FILE" ] || { note "致命:iGemini 产品身份 prompt 缺失($IGEMINI_SYSTEM_PROMPT_FILE)"; exit 78; }
+# 远程 bootstrap / GrowthBook 历史缓存会优先进入 system prompt；联网开关无法可靠忽略旧 clientDataCache。
+# 启动前只删这些远程控制缓存，保留登录、会话、项目与用户设置；命中时先做 0600 备份。
+SANITIZER="$IG/sanitize-claude-state.mjs"
+[ -f "$SANITIZER" ] || { note "致命:安全清理器缺失($SANITIZER)"; exit 78; }
+SANITIZE_RESULT="$(node "$SANITIZER" "$CLAUDE_CONFIG_DIR" 2>>"$LOG")" || { note "致命:Claude 状态安全清理失败"; exit 78; }
+note "Claude 状态安全检查:$SANITIZE_RESULT"
 # 预置 claude 引导完成标记：否则隔离配置是全新的，Shell 里跑 claude 会弹主题/信任向导，
 # 还会挡住历史会话的 --resume（用户只看到引导、看不到对话）。合并、幂等、原子落盘。
 "$IG/python/bin/python3" - <<'PY' 2>/dev/null || true

@@ -9,7 +9,7 @@
 ; 版本号单一真源 = 同目录 VERSION 文件；build-installer.ps1 读它、以 /DAppVersion=<ver> 传进来。
 ; 直接 iscc（不经 build 脚本）时用下面 fallback（与 VERSION 保持一致）。
 #ifndef AppVersion
-  #define AppVersion "1.1.0"
+  #define AppVersion "1.3.2"
 #endif
 #define StageDir   "staging"
 
@@ -197,8 +197,8 @@ procedure CurStepChanged(CurStep: TSetupStep);
 var ClaudeMd: String;
 begin
   if CurStep <> ssPostInstall then exit;
-  // 部署版 CLAUDE.md（让 spawn 出的 CC 知道能力命令 + 严禁 pip）——总是部署，已有的先备份成 .bak
-  ClaudeMd := GetEnv('USERPROFILE') + '\.claude\CLAUDE.md';
+  // 部署版 CLAUDE.md 只进 iGemini 隔离目录，不覆盖用户日常 Claude Code 指引。
+  ClaudeMd := GetEnv('USERPROFILE') + '\.claude-igemini\CLAUDE.md';
   ForceDirectories(ExtractFileDir(ClaudeMd));
   if FileExists(ClaudeMd) then begin
     DeleteFile(ClaudeMd + '.bak');

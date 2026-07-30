@@ -80,6 +80,8 @@ iGemini has no AI compute of its own — you provide a **model-service key** to 
 ## Privacy & notes
 
 - **Local-first**: iGemini itself, your conversation history, and your keys all live on your own computer — nothing goes through a relay server.
+- **Pinned client**: installers pin Claude Code 2.1.220 exactly; audited platforms verify the native binary SHA-256 during the build and fail on mismatch.
+- **Reduced remote control surface**: runtime launchers disable non-essential traffic, remote experiments, telemetry, error reporting, and auto-updates, and remove legacy remote-experiment caches before startup.
 - **Where AI requests go**: your prompts are sent to the model services you configured (DeepSeek / Qwen / Serper) for processing — unavoidable when using AI, so use your judgment with sensitive content.
 - **The green dot**: after a reply finishes, the green dot next to a conversation may keep pulsing for a moment before going out — that's just the model connection winding down. The reply was delivered long before; nothing is wrong.
 - **Not Apple, not Google**: the name is a joke — under the hood it's the Claude Code engine + DeepSeek / Qwen models, with no connection to Apple or Google.
