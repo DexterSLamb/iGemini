@@ -77,6 +77,10 @@ const STRIP_DIST_ENTRIES = [
   // Vite copies these upstream documentation/build-helper files from public/.
   // The compiled application has no references to them.
   'screenshots', 'convert-icons.md', 'generate-icons.js',
+  // Upstream CloudCLI logo files are unreferenced after the iGemini favicon,
+  // manifest and notification icon patch. Do not ship a dormant blue logo
+  // that browsers or future wrappers could rediscover by convention.
+  'logo-32.png', 'logo-64.png', 'logo-128.png', 'logo-256.png', 'logo-512.png',
 ];
 const DEPENDENCY_TEST_DIRECTORY_NAMES = new Set(['test', 'tests', '__tests__']);
 

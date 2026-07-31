@@ -4,7 +4,7 @@
 <dict>
   <key>CFBundleName</key><string>iGemini</string>
   <key>CFBundleDisplayName</key><string>iGemini</string>
-  <key>CFBundleIdentifier</key><string>com.cloudcli.webkitapp</string>
+  <key>CFBundleIdentifier</key><string>uk.igemini.app</string>
   <key>CFBundleExecutable</key><string>iGemini</string>
   <key>CFBundleIconFile</key><string>icon</string>
   <key>CFBundlePackageType</key><string>APPL</string>

@@ -15,6 +15,39 @@ if [ "$CLAUDE_PLATFORM_READY" -eq 1 ]; then
   /bin/rmdir "$IG/claude-pkg/node_modules/@anthropic-ai/claude-code/bin" \
                "$IG/claude-pkg/node_modules/.bin" 2>/dev/null || true
 fi
+# 1.3.2 早期包遗留了未被页面引用的 CloudCLI 蓝色 logo。新 payload 已不再携带，
+# 但 PackageKit 覆盖升级不会自动删除旧文件；逐个精确清理，避免缓存或后续代码误用。
+/bin/rm -f "$IG/claudecodeui/dist/logo-32.png" \
+           "$IG/claudecodeui/dist/logo-64.png" \
+           "$IG/claudecodeui/dist/logo-128.png" \
+           "$IG/claudecodeui/dist/logo-256.png" \
+           "$IG/claudecodeui/dist/logo-512.png" 2>/dev/null || true
+# PackageKit 的覆盖升级不会删除新 payload 已移除的旧文件。使用随包生成的不可变
+# payload 清单清理整个产品运行时中的遗留源码、source map、测试、缓存和旧依赖；
+# 用户配置、会话、key 与工作区均位于 /Applications/iGemini 之外，不在清理范围。
+RUNTIME_PRUNER="$IG/prune-installed-runtime.py"
+RUNTIME_MANIFEST="$IG/.igemini-runtime-manifest.json"
+if [ ! -x "$IG/python/bin/python3" ] || [ ! -f "$RUNTIME_PRUNER" ] || [ ! -f "$RUNTIME_MANIFEST" ]; then
+  echo "iGemini: fresh payload or runtime manifest is incomplete; refusing unsafe upgrade cleanup" >&2
+  exit 1
+fi
+"$IG/python/bin/python3" -B "$RUNTIME_PRUNER" --prune "$IG" "$RUNTIME_MANIFEST" \
+  || { echo "iGemini: stale runtime cleanup failed" >&2; exit 1; }
+# 图标按系统原生能力分流：macOS 26+ 读取 Icon Composer 编译的 AppIcon；
+# macOS 12-15 不声明资源名，继续读取原有 icon.icns，保持既有 x64 版本的圆形外观。
+# Info.plist 变更发生在最终签名前，避免破坏 app 壳的 ad-hoc 签名。
+MACOS_VERSION=$(/usr/bin/sw_vers -productVersion 2>/dev/null || true)
+MACOS_MAJOR=${MACOS_VERSION%%.*}
+case "$MACOS_MAJOR" in
+  ''|*[!0-9]*) MACOS_MAJOR=0 ;;
+esac
+if [ "$MACOS_MAJOR" -ge 26 ]; then
+  /usr/libexec/PlistBuddy -c "Delete :CFBundleIconName" "$APP/Contents/Info.plist" >/dev/null 2>&1 || true
+  /usr/libexec/PlistBuddy -c "Add :CFBundleIconName string AppIcon" "$APP/Contents/Info.plist" \
+    || { echo "iGemini: unable to enable the macOS 26 app icon" >&2; exit 1; }
+else
+  /usr/libexec/PlistBuddy -c "Delete :CFBundleIconName" "$APP/Contents/Info.plist" >/dev/null 2>&1 || true
+fi
 # 1) 清 quarantine（打包二进制下载来的，否则 Gatekeeper 拦）
 /usr/bin/xattr -dr com.apple.quarantine "$IG" "$APP" 2>/dev/null || true
 # 2) ad-hoc 重签壳（保险，AS 要求签名）
@@ -30,6 +63,14 @@ if [ -n "$U" ] && [ "$U" != "root" ]; then
   HOME_=$(/usr/bin/dscl . -read "/Users/$U" NFSHomeDirectory 2>/dev/null | awk '{print $2}'); [ -z "$HOME_" ] && HOME_="/Users/$U"
   /bin/rm -f "$HOME_/Library/LaunchAgents/com.igemini.web.plist" 2>/dev/null || true   # 旧版本曾装在用户级，清掉以免双加载
   /bin/rm -f "$HOME_/.config/igemini/.app-opened" 2>/dev/null || true                  # 本次装完自动弹一次桌面壳
+  # 旧上游 Bundle ID 的 WebKit/HTTP/cache/preferences 已由 uk.igemini.app 取代。
+  # 只清当前登录用户的旧壳缓存；不碰 iGemini 会话、配置、key 或工作区。
+  /bin/rm -rf "$HOME_/Library/WebKit/com.cloudcli.webkitapp" \
+              "$HOME_/Library/HTTPStorages/com.cloudcli.webkitapp" \
+              "$HOME_/Library/Caches/com.cloudcli.webkitapp" \
+              "$HOME_/Library/Saved Application State/com.cloudcli.webkitapp.savedState" 2>/dev/null || true
+  /bin/rm -f "$HOME_/Library/Preferences/com.cloudcli.webkitapp.plist" \
+             "$HOME_/Library/Cookies/com.cloudcli.webkitapp.binarycookies" 2>/dev/null || true
   /bin/launchctl bootout "gui/$UID_/com.igemini.web" 2>/dev/null || true
   /bin/launchctl bootstrap "gui/$UID_" "$LA/com.igemini.web.plist" 2>/dev/null || true
 fi

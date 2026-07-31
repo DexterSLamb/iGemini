@@ -32,12 +32,16 @@ SHELL_IDENTITY_PATCH="$REPO/scripts/common/patch-cloudcli-shell-identity.py"
 SINGLE_PROVIDER_PATCH="$REPO/scripts/common/patch-cloudcli-single-provider.py"
 RUNTIME_PRUNER="$REPO/scripts/common/prune-cloudcli-runtime.mjs"
 PYTHON_RUNTIME_PRUNER="$REPO/scripts/common/prune-python-runtime.py"
+RUNTIME_INSTALL_PRUNER="$HERE/src/prune-installed-runtime.py"
+MACOS_IME_PATCH="$HERE/src/patch-cloudcli-macos-ime.py"
+MACOS_CLIPBOARD_PATCH="$HERE/src/patch-cloudcli-macos-clipboard.py"
 # 构建工作目录放无空格路径（node-gyp 源码编译遇路径空格会失败；本仓在 "Claude Code/" 下有空格）
 WORK="${IGBUILD_WORK:-/tmp/igbuild}/$ARCH"
 CACHE="$WORK/cache"; STAGE="$WORK/staging"; PKGROOT="$WORK/pkgroot"; OUT="$HERE/out"
 PX="${PROXY:-}"
 PATCH="$REPO/vendor/igemini-claudecodeui.patch"
 ICON="$REPO/assets/igemini-icon.png"
+ICON_COMPOSER_JSON="$REPO/scripts/macos/cloudcli-webkit/AppIcon.icon.json"
 CCUI_REPO="siteboon/claudecodeui"
 CCUI_COMMIT="27eaf0146a46aa8a55178f3d394360ff7465420f"
 NODE_CDN="https://cdn.npmmirror.com/binaries/node"
@@ -88,7 +92,13 @@ VER="$MKVER.$(date +%Y%m%d%H%M%S)"   # pkg 内部版本 = 营销版本.秒级时
 [ -f "$SINGLE_PROVIDER_PATCH" ] || die "缺单助手产品补丁: $SINGLE_PROVIDER_PATCH"
 [ -f "$RUNTIME_PRUNER" ] || die "缺 CloudCLI 运行时裁剪器: $RUNTIME_PRUNER"
 [ -f "$PYTHON_RUNTIME_PRUNER" ] || die "缺 Python 运行时裁剪器: $PYTHON_RUNTIME_PRUNER"
+[ -f "$RUNTIME_INSTALL_PRUNER" ] || die "缺安装后运行时清理器: $RUNTIME_INSTALL_PRUNER"
+[ -f "$MACOS_IME_PATCH" ] || die "缺 macOS Shell 中文输入补丁: $MACOS_IME_PATCH"
+[ -f "$MACOS_CLIPBOARD_PATCH" ] || die "缺 macOS Shell 原生剪贴板补丁: $MACOS_CLIPBOARD_PATCH"
+[ -s "$ICON" ] || die "缺 iGemini 图标源文件: $ICON"
+[ -s "$ICON_COMPOSER_JSON" ] || die "缺 Icon Composer 配置: $ICON_COMPOSER_JSON"
 command -v xcrun >/dev/null || die "缺 Xcode CLT(clang)"
+xcrun --find actool >/dev/null 2>&1 || die "缺 Xcode 26 actool（macOS 26 分层图标构建需要完整 Xcode）"
 mkdir -p "$CACHE" "$STAGE" "$OUT"
 
 # 封闭 npm 环境（只在本脚本内生效，绝不碰 ~/.npm / ~/.npmrc / 系统 claude）
@@ -129,9 +139,12 @@ rmdir "$STAGE/claude-pkg/node_modules/@anthropic-ai/claude-code/bin" \
   || die "Claude 重复二进制删除失败"
 ok "claude $CLAUDE_CODE_VERSION 二进制 arch=$(arch_of "$CLBIN")（已按审计清单校验；移除未采用通用入口 ${CLAUDE_GENERIC_SIZE}B）"
 
+# 这里只缓存步骤 3-5 的 CloudCLI 源码/前端/服务端构建；必须覆盖这些步骤的全部输入。
+# VERSION 会进入 VITE_IGEMINI_VERSION，单独变更版本号时也必须使缓存失效。
 BUILD_FINGERPRINT="$(shasum -a 256 "$PATCH" "$REPO/scripts/common/patch-cloudcli-claude-config.py" \
   "$PRODUCT_IDENTITY_PATCH" "$PRODUCT_SYSTEM_PROMPT" "$SHELL_IDENTITY_PATCH" "$SINGLE_PROVIDER_PATCH" \
-  "$RUNTIME_PRUNER" "$HERE/build-pkg.sh" | shasum -a 256 | awk '{print $1}')"
+  "$RUNTIME_PRUNER" "$RUNTIME_INSTALL_PRUNER" "$MACOS_IME_PATCH" "$MACOS_CLIPBOARD_PATCH" \
+  "$HERE/VERSION" "$HERE/build-pkg.sh" | shasum -a 256 | awk '{print $1}')"
 if [ -d "$STAGE/claudecodeui/dist-server" ] \
    && [ "$(cat "$STAGE/claudecodeui/.igemini-build-fingerprint" 2>/dev/null || true)" = "$BUILD_FINGERPRINT" ]; then
   ok "claudecodeui 构建指纹匹配，复用（跳过 3-5）"
@@ -151,7 +164,9 @@ python3 "$REPO/scripts/common/patch-cloudcli-claude-config.py" "$STAGE/claudecod
 python3 "$PRODUCT_IDENTITY_PATCH" "$STAGE/claudecodeui"
 python3 "$SHELL_IDENTITY_PATCH" "$STAGE/claudecodeui"
 python3 "$SINGLE_PROVIDER_PATCH" "$STAGE/claudecodeui"
-ok "已套白标 + CLAUDE_CONFIG_DIR + 原生产品身份 + iGemini 单助手产品补丁"
+python3 "$MACOS_IME_PATCH" "$STAGE/claudecodeui"
+python3 "$MACOS_CLIPBOARD_PATCH" "$STAGE/claudecodeui"
+ok "已套白标 + CLAUDE_CONFIG_DIR + 原生产品身份 + iGemini 单助手 + macOS Shell 中文输入/原生剪贴板补丁"
 
 # ---- 4) npm ci（按构建机 arch 装；保证 build 工具 rollup/vite/esbuild 可在构建机上跑）----
 say "4/12 npm ci"
@@ -170,12 +185,39 @@ if [ "$NODE_ARCH" != "arm64" ]; then   # 构建机=arm64；目标非 arm64 → �
   BCR=$(find "$STAGE/claudecodeui/node_modules/bcrypt" -name "*.node" 2>/dev/null | head -1)
   ok "运行时原生重建 → better-sqlite3:$(arch_of "$SQL")  bcrypt:$(arch_of "$BCR")"
 fi
-# @vscode/ripgrep 的 postinstall 会保留已有 host-arch bin；强制按目标架构重取，
-# 防止 Apple Silicon 构建 x64 包时把 arm64 rg 装进 Intel installer。
-( cd "$STAGE/claudecodeui/node_modules/@vscode/ripgrep" && env \
-    npm_config_arch="$NODE_ARCH" HTTPS_PROXY="$PX" HTTP_PROXY="$PX" \
-    node lib/postinstall.js --force >/dev/null )
-ok "ripgrep 已按目标架构重装 → $(arch_of "$STAGE/claudecodeui/node_modules/@vscode/ripgrep/bin/rg")"
+# @vscode/ripgrep 的 npm postinstall 已为构建机安装 host-arch bin。若它正好
+# 等于目标架构就直接复用；仅交叉构建时强制重取，避免无意义的网络依赖。
+# 代理变量同时覆盖大小写（proxy-from-env）并在外层重试，抵御 GitHub 抖动。
+RG_ROOT="$STAGE/claudecodeui/node_modules/@vscode/ripgrep"
+RG_BIN="$RG_ROOT/bin/rg"
+RG_EXPECTED_ARCH="$CLANG_ARCH"
+RG_VERSION="$(node -p "require('$RG_ROOT/package.json').version")"
+RG_CACHE="$CACHE/ripgrep-$RG_VERSION-$NODE_ARCH"
+if [ "$(arch_of "$RG_BIN")" != "$RG_EXPECTED_ARCH" ]; then
+  if [ -x "$RG_CACHE" ] && [ "$(arch_of "$RG_CACHE")" = "$RG_EXPECTED_ARCH" ]; then
+    /bin/cp "$RG_CACHE" "$RG_BIN"
+  else
+    RG_READY=0
+    for RG_ATTEMPT in 1 2 3; do
+      if ( cd "$RG_ROOT" && env \
+          npm_config_arch="$NODE_ARCH" \
+          HTTPS_PROXY="$PX" HTTP_PROXY="$PX" https_proxy="$PX" http_proxy="$PX" \
+          npm_config_https_proxy="$PX" npm_config_proxy="$PX" \
+          node lib/postinstall.js --force >/dev/null ); then
+        RG_READY=1
+        break
+      fi
+      [ "$RG_ATTEMPT" -lt 3 ] && sleep $((RG_ATTEMPT * 2))
+    done
+    [ "$RG_READY" -eq 1 ] || die "ripgrep ${NODE_ARCH} 下载失败（已重试 3 次）"
+  fi
+fi
+[ "$(arch_of "$RG_BIN")" = "$RG_EXPECTED_ARCH" ] \
+  || die "ripgrep 架构不匹配：期望 ${RG_EXPECTED_ARCH}，实际 $(arch_of "$RG_BIN")"
+/bin/cp "$RG_BIN" "$RG_CACHE.part"
+/bin/chmod 755 "$RG_CACHE.part"
+/bin/mv "$RG_CACHE.part" "$RG_CACHE"
+ok "ripgrep 目标架构校验通过 → $(arch_of "$RG_BIN")"
 python3 - "$STAGE/claudecodeui/dist-server/server/claude-sdk.js" <<'PY'
 import sys; f=sys.argv[1]; s=open(f,encoding="utf-8").read()
 old="if (settings.skipPermissions && permissionMode !== 'plan') {"
@@ -234,9 +276,39 @@ cp "$WSRC/Info.plist" "$APP/Contents/Info.plist"
 # 版本号以 VERSION 文件为单一真源钉进 app（关于面板读 CFBundleShortVersionString）——免得 Info.plist 手改漏了对不上
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $MKVER" -c "Set :CFBundleVersion $MKVER" "$APP/Contents/Info.plist" >/dev/null 2>&1 || true
 [ -f "$WSRC/icon.icns" ] && cp "$WSRC/icon.icns" "$APP/Contents/Resources/icon.icns"
+# macOS 26 用 Icon Composer 的分层 Assets.car，让系统原生生成 Liquid Glass
+# 圆角方形且不再给透明圆形图补白底。旧系统仍由 Info.plist 的 icon.icns
+# 提供既有圆形图；postinstall 仅在 macOS 26+ 添加 CFBundleIconName=AppIcon。
+ICON_DOCUMENT="$CACHE/AppIcon.icon"
+ICON_OUTPUT="$CACHE/iGemini-AppIcon-assets"
+ICON_PARTIAL_PLIST="$CACHE/iGemini-AppIcon-partial.plist"
+ICON_ASSET_INFO="$CACHE/iGemini-AppIcon-assets.json"
+ICON_COMPOSER_SOURCE="$CACHE/iGemini-AppIcon-source.png"
+rm -rf "$ICON_DOCUMENT" "$ICON_OUTPUT"
+mkdir -p "$ICON_DOCUMENT/Assets" "$ICON_OUTPUT"
+cp "$ICON_COMPOSER_JSON" "$ICON_DOCUMENT/icon.json"
+# 共享品牌 PNG 是旧系统圆形图源，外围包含 87 px 透明留白和约 45–50 px
+# 白色圆环。Icon Composer 会在其外再生成 macOS 26 圆角容器，若直接使用就
+# 形成双层边缘。仅为 macOS 26 居中裁取 1220×1220 的圆环内侧并恢复到
+# 1500×1500；原始图和 macOS 12–15 的 icon.icns 均保持不变。
+cp "$ICON" "$ICON_COMPOSER_SOURCE"
+sips -c 1220 1220 "$ICON_COMPOSER_SOURCE" >/dev/null
+sips -z 1500 1500 "$ICON_COMPOSER_SOURCE" >/dev/null
+cp "$ICON_COMPOSER_SOURCE" "$ICON_DOCUMENT/Assets/iGemini.png"
+xcrun actool --compile "$ICON_OUTPUT" \
+  --platform macosx --minimum-deployment-target 26.0 \
+  --app-icon AppIcon --target-device mac --standalone-icon-behavior none \
+  --output-partial-info-plist "$ICON_PARTIAL_PLIST" \
+  --warnings --errors --notices --output-format human-readable-text \
+  "$ICON_DOCUMENT" >/dev/null
+[ -s "$ICON_OUTPUT/Assets.car" ] || die "Icon Composer 未生成 Assets.car"
+xcrun assetutil --info "$ICON_OUTPUT/Assets.car" > "$ICON_ASSET_INFO"
+grep -Fq '"AssetType" : "IconImageStack"' "$ICON_ASSET_INFO" \
+  || die "Assets.car 缺少 macOS 26 分层图标"
+cp "$ICON_OUTPUT/Assets.car" "$APP/Contents/Resources/Assets.car"
 for L in en zh-Hans; do [ -d "$WSRC/$L.lproj" ] && cp -R "$WSRC/$L.lproj" "$APP/Contents/Resources/"; done
 xattr -cr "$APP"; codesign --force --deep -s - "$APP" 2>/dev/null
-ok "壳 arch=$(arch_of "$APP/Contents/MacOS/iGemini")  已 ad-hoc 签名"
+ok "壳 arch=$(arch_of "$APP/Contents/MacOS/iGemini")  旧版圆形 icns + macOS 26 分层图标均已验证；已 ad-hoc 签名"
 
 # ---- 9) chrome-headless-shell（目标 arch；md2pdf 用）----
 say "9/12 chrome-headless-shell（mac-${CHROME_ARCH}）"
@@ -265,6 +337,7 @@ mkdir -p "$STAGE/tools"; cp "$HERE/src/tools/"*.py "$STAGE/tools/"
 ( cd "$STAGE/tools"; for t in parsedoc websearch describe-image md2docx md2pdf; do ln -sf "$t.py" "$t"; done ); chmod +x "$STAGE/tools/"*.py
 cp "$HERE/src/start-web.sh" "$STAGE/start-web.sh"; chmod +x "$STAGE/start-web.sh"
 cp "$CLAUDE_SANITIZER" "$STAGE/sanitize-claude-state.mjs"; chmod +x "$STAGE/sanitize-claude-state.mjs"
+cp "$RUNTIME_INSTALL_PRUNER" "$STAGE/prune-installed-runtime.py"; chmod +x "$STAGE/prune-installed-runtime.py"
 cp "$PRODUCT_SYSTEM_PROMPT" "$STAGE/igemini-system-prompt.md"
 cp "$HERE/src/CLAUDE.md" "$STAGE/CLAUDE.md"
 cp "$HERE/src/com.igemini.web.plist" "$STAGE/com.igemini.web.plist"
@@ -306,11 +379,25 @@ ok "legal/ 就位（AGPL 全文 + 白标 patch + SOURCE.txt）"
 # ---- 11) 组装 pkgroot + pkgbuild（latest 压缩）----
 say "11/12 pkgbuild"
 rm -rf "$PKGROOT"; mkdir -p "$PKGROOT/Applications/iGemini"
-for d in runtime claude-pkg claudecodeui python chromium bin tools legal start-web.sh sanitize-claude-state.mjs igemini-system-prompt.md CLAUDE.md com.igemini.web.plist; do
+for d in runtime claude-pkg claudecodeui python chromium bin tools legal start-web.sh sanitize-claude-state.mjs prune-installed-runtime.py igemini-system-prompt.md CLAUDE.md com.igemini.web.plist; do
   cp -R "$STAGE/$d" "$PKGROOT/Applications/iGemini/"
 done
+RUNTIME_MANIFEST_TMP="$CACHE/runtime-manifest-$ARCH.json"
+python3 "$RUNTIME_INSTALL_PRUNER" --write-manifest \
+  "$PKGROOT/Applications/iGemini" "$RUNTIME_MANIFEST_TMP" >/dev/null
+cp "$RUNTIME_MANIFEST_TMP" "$PKGROOT/Applications/iGemini/.igemini-runtime-manifest.json"
 cp -R "$STAGE/iGemini.app" "$PKGROOT/Applications/iGemini.app"
+# pkgbuild 默认把 .app 标成可重定位。若构建机/用户磁盘上曾注册过同 Bundle ID
+# 的开发壳，Installer 会把 payload 悄悄铺回旧路径，而不是 /Applications。
+# 显式关闭重定位与 bundle 版本跳过，确保升级/重装总在产品固定位置原子覆盖。
+COMPONENT_PLIST="$CACHE/component-$ARCH.plist"
+pkgbuild --analyze --root "$PKGROOT" "$COMPONENT_PLIST"
+/usr/libexec/PlistBuddy -c "Set :0:BundleIsRelocatable false" \
+  -c "Set :0:BundleIsVersionChecked false" "$COMPONENT_PLIST"
+[ "$(plutil -extract 0.BundleIsRelocatable raw "$COMPONENT_PLIST")" = "false" ] \
+  || die "iGemini.app 禁止重定位元数据生成失败"
 pkgbuild --root "$PKGROOT" --install-location / --scripts "$HERE/pkg-scripts" \
+  --component-plist "$COMPONENT_PLIST" \
   --identifier com.igemini.pkg --version "$VER" --compression latest --min-os-version 12.0 \
   "$OUT/iGemini-component-$ARCH.pkg"
 ok "组件包 $(du -h "$OUT/iGemini-component-$ARCH.pkg" | cut -f1)"
@@ -338,6 +425,27 @@ XEOF
 # welcome.rtf / LICENSE.txt 由 productbuild --resources 直接引用，无需额外拷贝
 PRODUCT="$OUT/iGemini-Installer-$ARCH-v$MKVER.pkg"   # 包名带用户可见版本号
 productbuild --distribution "$DIST" --resources "$HERE/resources" --package-path "$OUT" "$PRODUCT"
+
+# 只展开 xar 元数据（不解压大 payload）做发布门禁：目标架构、产品 Bundle ID、
+# 固定安装路径和禁止重定位必须同时成立，避免 ARM64/x64 再出现行为分叉。
+VERIFY="$WORK/package-verify"
+rm -rf "$VERIFY"; mkdir -p "$VERIFY"
+pkgutil --expand "$PRODUCT" "$VERIFY/product"
+COMPONENT_META="$VERIFY/product/iGemini-component-$ARCH.pkg"
+[ -d "$COMPONENT_META" ] || die "产品包缺少组件元数据目录: iGemini-component-$ARCH.pkg"
+grep -Fq "hostArchitectures=\"$PKG_HOST\"" "$VERIFY/product/Distribution" \
+  || die "产品包 hostArchitectures 不匹配: $PKG_HOST"
+grep -Fq 'id="uk.igemini.app"' "$COMPONENT_META/PackageInfo" \
+  || die "产品包缺少 iGemini 自有 Bundle ID"
+# pkgbuild 对不可重定位组件仍会生成空的 <relocate/> 容器；真正的风险是其中
+# 存在 bundle 子节点，它会让 Installer 按 LaunchServices 记录迁移 App。
+RELOCATE_BUNDLES="$(xmllint --xpath 'count(/pkg-info/relocate/bundle)' \
+  "$COMPONENT_META/PackageInfo" 2>/dev/null)"
+[ "$RELOCATE_BUNDLES" = "0" ] \
+  || die "产品包仍允许 iGemini.app 重定位（bundle 数=$RELOCATE_BUNDLES）"
+grep -Fq 'path="./Applications/iGemini.app"' "$COMPONENT_META/PackageInfo" \
+  || die "产品包缺少固定 /Applications/iGemini.app payload"
+rm -rf "$VERIFY"
 
 say "完成"
 echo "  产物: $PRODUCT  ($(du -h "$PRODUCT" | cut -f1))  版本=$MKVER  目标=$PKG_HOST"

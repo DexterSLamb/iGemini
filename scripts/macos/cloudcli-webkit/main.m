@@ -7,6 +7,8 @@
 #import <WebKit/WebKit.h>
 
 static NSURL *HomeURL(void) { return [NSURL URLWithString:@"http://localhost:8888"]; }
+// NSString.length and JavaScript String.length both count UTF-16 code units.
+static const NSUInteger IGTerminalClipboardCharacterLimit = 8 * 1024 * 1024;
 
 // 本地加载动画页（服务未就绪时显示）：暗底 + 旋转圈 + 本地化文案，纯前端、不联网。
 // accent = 旋转圈颜色（正常=蓝；慢速/异常=琥珀）。
@@ -126,16 +128,23 @@ static NSString *KeyFormHTML(NSString *ds, NSString *sp, NSString *qk, NSString 
     return h;
 }
 
-@interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandler>
+@interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate, NSMenuItemValidation, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandler>
 @property (strong) NSWindow *window;
 @property (strong) WKWebView *webView;
 @property (strong) NSStatusItem *statusItem;
+@property (strong) NSMenuItem *terminalCopyMenuItem;
+@property (strong) NSMenuItem *terminalPasteMenuItem;
+@property (strong) NSMenuItem *terminalPasteMatchMenuItem;
+@property (strong) NSMenuItem *terminalSelectAllMenuItem;
 @property (strong) NSMutableSet *downloads;
 @property (assign) BOOL pageReady;    // 真正页面是否已就绪载入（用于加载动画/轮询状态机）
 @property (assign) int  pollCount;    // 轮询累计次数（超时后切"慢速/异常"提示页）
 @property (assign) BOOL formShowing;  // 正在显示填 key 表单（抑制轮询/失败页覆盖）
 @property (strong) WKUserContentController *ucc;  // 保留引用，用于注入登录 token 脚本
 @property (assign) BOOL authDone;     // 已自动登录并注入 token（本次进程内只做一次）
+@property (strong) NSTask *backendRestartTask; // 保存 key 后等待 launchctl 真正完成重启，再探测新服务
+@property (assign) BOOL terminalFocused;
+@property (assign) BOOL terminalHasSelection;
 @end
 
 @implementation AppDelegate
@@ -184,6 +193,7 @@ static NSString *KeyFormHTML(NSString *ds, NSString *sp, NSString *qk, NSString 
     // 填 key 表单的消息回调：igkeys=提交 key（壳原生写文件）、igopen=打开"去申请"链接
     [ucc addScriptMessageHandler:self name:@"igkeys"];
     [ucc addScriptMessageHandler:self name:@"igopen"];
+    [ucc addScriptMessageHandler:self name:@"igterminal"];
     self.ucc = ucc;   // 保留引用：自动登录拿到 token 后往里加注入脚本
 
     cfg.userContentController = ucc;
@@ -200,11 +210,15 @@ static NSString *KeyFormHTML(NSString *ds, NSString *sp, NSString *qk, NSString 
     [self.window makeKeyAndOrderFront:nil];
     [NSApp activateIgnoringOtherApps:YES];
 
-    // 顶部菜单栏右侧常驻入口图标(Siri 风格)
+    // 顶部菜单栏右侧常驻入口图标。必须显式读取旧版圆形 icon.icns：
+    // macOS 26 的 applicationIconImage 会解析为用于 Dock 的 AppIcon 圆角方形容器，
+    // 缩到 18×18 后就会变成偏小的“迷你 Dock 图标”；直接读取 icon.icns 才与
+    // macOS 12/x64 的既有菜单栏效果一致。
     self.statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
-    NSImage *appIcon = [NSApp applicationIconImage];
-    if (appIcon) {
-        NSImage *small = [appIcon copy];
+    NSString *statusIconPath = [[NSBundle mainBundle] pathForResource:@"icon" ofType:@"icns"];
+    NSImage *statusIcon = statusIconPath ? [[NSImage alloc] initWithContentsOfFile:statusIconPath] : nil;
+    if (statusIcon) {
+        NSImage *small = [statusIcon copy];
         [small setSize:NSMakeSize(18, 18)];
         [small setTemplate:NO];
         self.statusItem.button.image = small;
@@ -247,6 +261,93 @@ static NSString *KeyFormHTML(NSString *ds, NSString *sp, NSString *qk, NSString 
 - (void)zoomOut:(id)sender   { [self applyZoom:self.webView.pageZoom / 1.1]; }
 - (void)zoomReset:(id)sender { [self applyZoom:1.0]; }
 
+// —— Shell/xterm 原生剪贴板桥 ——
+// xterm 的选区是它自己的 buffer 语义，不是 DOM Selection；WKWebView 的第一响应者
+// 因而无法自动验证 copy:。终端聚焦时把三个相关菜单路由到原生壳，普通网页输入/选区
+// 仍恢复 target=nil 的标准 AppKit/WKWebView 响应链。
+- (void)updateTerminalMenuRouting {
+    if (!self.terminalCopyMenuItem) return;
+    if (self.terminalFocused) {
+        self.terminalCopyMenuItem.target = self;
+        self.terminalCopyMenuItem.action = @selector(copyTerminal:);
+        self.terminalPasteMenuItem.target = self;
+        self.terminalPasteMenuItem.action = @selector(pasteTerminal:);
+        self.terminalPasteMatchMenuItem.target = self;
+        self.terminalPasteMatchMenuItem.action = @selector(pasteTerminal:);
+        self.terminalSelectAllMenuItem.target = self;
+        self.terminalSelectAllMenuItem.action = @selector(selectAllTerminal:);
+    } else {
+        self.terminalCopyMenuItem.target = nil;
+        self.terminalCopyMenuItem.action = @selector(copy:);
+        self.terminalPasteMenuItem.target = nil;
+        self.terminalPasteMenuItem.action = @selector(paste:);
+        self.terminalPasteMatchMenuItem.target = nil;
+        self.terminalPasteMatchMenuItem.action = @selector(pasteAsPlainText:);
+        self.terminalSelectAllMenuItem.target = nil;
+        self.terminalSelectAllMenuItem.action = @selector(selectAll:);
+    }
+}
+
+- (void)resetTerminalClipboardState {
+    self.terminalFocused = NO;
+    self.terminalHasSelection = NO;
+    [self updateTerminalMenuRouting];
+}
+
+- (BOOL)isTrustedTerminalMessage:(WKScriptMessage *)msg {
+    if (!msg.frameInfo.isMainFrame) return NO;
+    NSURL *url = msg.frameInfo.request.URL;
+    NSString *host = url.host.lowercaseString;
+    BOOL localHost = [host isEqualToString:@"localhost"] || [host isEqualToString:@"127.0.0.1"];
+    return [url.scheme.lowercaseString isEqualToString:@"http"] && localHost && url.port.integerValue == 8888;
+}
+
+- (void)writeTerminalTextToPasteboard:(NSString *)text {
+    if (![text isKindOfClass:[NSString class]] || text.length == 0 ||
+        text.length > IGTerminalClipboardCharacterLimit) return;
+    NSPasteboard *pb = [NSPasteboard generalPasteboard];
+    [pb clearContents];
+    [pb writeObjects:@[text]];
+}
+
+- (void)copyTerminal:(id)sender {
+    if (!self.terminalHasSelection) return;
+    [self.webView evaluateJavaScript:@"window.__igeminiTerminalClipboard?.getSelection() || ''"
+        completionHandler:^(id value, NSError *error) {
+            if (!error && [value isKindOfClass:[NSString class]])
+                [self writeTerminalTextToPasteboard:(NSString *)value];
+        }];
+}
+
+- (void)pasteTerminal:(id)sender {
+    if (!self.terminalFocused) return;
+    NSString *text = [[NSPasteboard generalPasteboard] stringForType:NSPasteboardTypeString];
+    if (text.length == 0 || text.length > IGTerminalClipboardCharacterLimit) return;
+    // Named arguments are marshalled by WebKit; never interpolate clipboard text into JS source.
+    [self.webView callAsyncJavaScript:
+        @"const bridge = window.__igeminiTerminalClipboard; if (!bridge) return false; bridge.paste(text); return true;"
+        arguments:@{ @"text": text }
+        inFrame:nil
+        inContentWorld:WKContentWorld.pageWorld
+        completionHandler:nil];
+}
+
+- (void)selectAllTerminal:(id)sender {
+    if (!self.terminalFocused) return;
+    [self.webView evaluateJavaScript:@"window.__igeminiTerminalClipboard?.selectAll()" completionHandler:nil];
+}
+
+- (BOOL)validateMenuItem:(NSMenuItem *)item {
+    if (item.action == @selector(copyTerminal:))
+        return self.terminalFocused && self.terminalHasSelection;
+    if (item.action == @selector(pasteTerminal:))
+        return self.terminalFocused &&
+            ([[NSPasteboard generalPasteboard] availableTypeFromArray:@[NSPasteboardTypeString]] != nil);
+    if (item.action == @selector(selectAllTerminal:))
+        return self.terminalFocused;
+    return YES;
+}
+
 // —— 填 key 表单：显示（各框预填当前值）——
 - (void)showKeyForm:(id)sender {
     self.formShowing = YES;
@@ -256,12 +357,38 @@ static NSString *KeyFormHTML(NSString *ds, NSString *sp, NSString *qk, NSString 
     [self.window makeKeyAndOrderFront:nil];
     [NSApp activateIgnoringOtherApps:YES];
 }
-// 写完 key 后重启后端（让 start-web.sh 重读 ~/.config/deepseek/*）
-- (void)restartBackend {
+// 只显示加载页，不立即探测。保存 key 后必须先等 launchctl kickstart 结束，
+// 否则第一轮探测可能命中尚未被杀掉的旧服务；页面刚载入旧服务就被重启，
+// WebSocket 会断开并停在 Offline。
+- (void)showLoader {
+    [self resetTerminalClipboardState];
+    self.pageReady = NO;
+    self.pollCount = 0;
+    [self.webView loadHTMLString:LoaderHTML() baseURL:nil];
+}
+
+// 写完 key 后重启后端（让 start-web.sh 重读 ~/.config/deepseek/*），并以
+// launchctl 任务完成作为新一轮健康探测的起点，消除“旧进程仍在线”的竞态。
+- (void)restartBackendAndConnect {
+    [self showLoader];
     NSTask *t = [[NSTask alloc] init];
     t.launchPath = @"/bin/launchctl";
     t.arguments = @[@"kickstart", @"-k", [NSString stringWithFormat:@"gui/%u/com.igemini.web", getuid()]];
-    @try { [t launch]; } @catch (NSException *e) {}
+    self.backendRestartTask = t;
+    __weak typeof(self) ws = self;
+    t.terminationHandler = ^(NSTask *finished) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            __strong typeof(ws) self = ws; if (!self || self.backendRestartTask != finished) return;
+            self.backendRestartTask = nil;
+            [self pollServer];
+        });
+    };
+    @try {
+        [t launch];
+    } @catch (NSException *e) {
+        self.backendRestartTask = nil;
+        [self pollServer]; // launchctl 本身异常时仍允许既有服务恢复页面
+    }
 }
 // 联网实测 DeepSeek key：GET /user/balance —— 401/403=key 无效(打回)，200/网络错/其它=放行(best-effort)。
 // 用便宜的只读端点、不跑 completion；只验必填的 DeepSeek，Serper/Qwen 不拦。
@@ -288,12 +415,29 @@ static NSString *KeyFormHTML(NSString *ds, NSString *sp, NSString *qk, NSString 
     WriteCfg(@"deepseek/serper_key", b[@"sp"]);   // 选填留空即删
     WriteCfg(@"qwen/key",            b[@"qk"]);
     WriteCfg(@"qwen/base",           b[@"qb"]);
-    [self restartBackend];
     self.formShowing = NO;
-    [self showLoaderAndConnect];   // 回加载页轮询 → 后端重启就绪后自动进聊天
+    [self restartBackendAndConnect]; // 等后端重启完成再轮询，避免加载旧进程后 Offline
 }
 // 表单提交(igkeys) / 去申请链接(igopen) 的消息回调
 - (void)userContentController:(WKUserContentController *)ucc didReceiveScriptMessage:(WKScriptMessage *)msg {
+    if ([msg.name isEqualToString:@"igterminal"]) {
+        if (![self isTrustedTerminalMessage:msg]) return;
+        NSDictionary *body = [msg.body isKindOfClass:[NSDictionary class]] ? msg.body : nil;
+        NSString *type = [body[@"type"] isKindOfClass:[NSString class]] ? body[@"type"] : nil;
+        if ([type isEqualToString:@"state"] &&
+            [body[@"focused"] isKindOfClass:[NSNumber class]] &&
+            [body[@"hasSelection"] isKindOfClass:[NSNumber class]]) {
+            self.terminalFocused = [body[@"focused"] boolValue];
+            self.terminalHasSelection = self.terminalFocused && [body[@"hasSelection"] boolValue];
+            [self updateTerminalMenuRouting];
+        } else if ([type isEqualToString:@"copy"] && self.terminalFocused) {
+            NSString *text = [body[@"text"] isKindOfClass:[NSString class]] ? body[@"text"] : nil;
+            [self writeTerminalTextToPasteboard:text];
+        } else if ([type isEqualToString:@"paste"] && self.terminalFocused) {
+            [self pasteTerminal:nil];
+        }
+        return;
+    }
     if ([msg.name isEqualToString:@"igopen"]) {
         NSString *u = [msg.body isKindOfClass:[NSString class]] ? msg.body : nil;
         if (u.length) [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:u]];
@@ -309,9 +453,7 @@ static NSString *KeyFormHTML(NSString *ds, NSString *sp, NSString *qk, NSString 
 
 // 显示加载动画并开始轮询本地服务（8888）是否就绪。
 - (void)showLoaderAndConnect {
-    self.pageReady = NO;
-    self.pollCount = 0;
-    [self.webView loadHTMLString:LoaderHTML() baseURL:nil];
+    [self showLoader];
     [self pollServer];
 }
 
@@ -416,6 +558,13 @@ static NSString *KeyFormHTML(NSString *ds, NSString *sp, NSString *qk, NSString 
     if (self.formShowing) return;
     if (self.pageReady) { self.pageReady = NO; [self showLoaderAndConnect]; }
 }
+// 每次主文档切换先清空终端状态；新 xterm 初始化后会主动重新上报。
+- (void)webView:(WKWebView *)wv didCommitNavigation:(WKNavigation *)nav {
+    [self resetTerminalClipboardState];
+}
+- (void)webViewWebContentProcessDidTerminate:(WKWebView *)wv {
+    [self resetTerminalClipboardState];
+}
 // 页面载入完成后恢复上次缩放比例（pageZoom 是 webView 级属性，跨导航本应保留，这里兜底确保生效）
 - (void)webView:(WKWebView *)wv didFinishNavigation:(WKNavigation *)nav {
     double z = [[NSUserDefaults standardUserDefaults] doubleForKey:@"pageZoom"];
@@ -497,12 +646,13 @@ int main(int argc, const char *argv[]) {
         redo.keyEquivalentModifierMask = (NSEventModifierFlagCommand|NSEventModifierFlagShift);
         [editMenu addItem:[NSMenuItem separatorItem]];
         [editMenu addItemWithTitle:NSLocalizedString(@"menu.cut", nil) action:@selector(cut:) keyEquivalent:@"x"];
-        [editMenu addItemWithTitle:NSLocalizedString(@"menu.copy", nil) action:@selector(copy:) keyEquivalent:@"c"];
-        [editMenu addItemWithTitle:NSLocalizedString(@"menu.paste", nil) action:@selector(paste:) keyEquivalent:@"v"];
+        delegate.terminalCopyMenuItem = [editMenu addItemWithTitle:NSLocalizedString(@"menu.copy", nil) action:@selector(copy:) keyEquivalent:@"c"];
+        delegate.terminalPasteMenuItem = [editMenu addItemWithTitle:NSLocalizedString(@"menu.paste", nil) action:@selector(paste:) keyEquivalent:@"v"];
         NSMenuItem *pasteMatch = [editMenu addItemWithTitle:NSLocalizedString(@"menu.pasteMatch", nil) action:@selector(pasteAsPlainText:) keyEquivalent:@"v"];
+        delegate.terminalPasteMatchMenuItem = pasteMatch;
         pasteMatch.keyEquivalentModifierMask = (NSEventModifierFlagCommand|NSEventModifierFlagOption|NSEventModifierFlagShift);
         [editMenu addItemWithTitle:NSLocalizedString(@"menu.delete", nil) action:@selector(delete:) keyEquivalent:@""];
-        [editMenu addItemWithTitle:NSLocalizedString(@"menu.selectAll", nil) action:@selector(selectAll:) keyEquivalent:@"a"];
+        delegate.terminalSelectAllMenuItem = [editMenu addItemWithTitle:NSLocalizedString(@"menu.selectAll", nil) action:@selector(selectAll:) keyEquivalent:@"a"];
         [editItem setSubmenu:editMenu];
 
         // 视图菜单：缩放（⌘+ / ⌘- / ⌘0，浏览器风格）。target=delegate。
