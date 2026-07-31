@@ -37,13 +37,13 @@ iGemini 是一款**开箱即用、在本机运行**的 AI 助手。打开它，�
 
 ## 安装
 
-下载对应平台的安装包，双击安装即可（普通用户权限，无需管理员；装前会自动停掉旧版本）。
+打开[最新正式版下载页](https://github.com/DexterSLamb/iGemini/releases/latest)，选择对应平台的安装包，双击安装即可（普通用户权限，无需管理员；装前会自动停掉旧版本）。该链接会始终跳转到最新的正式 Release。
 
-| 平台 | 下载（v1.2.0） |
+| 平台 | 最新版下载 |
 |---|---|
-| **macOS（Apple Silicon / M 系列）** | [iGemini-Installer-arm64-v1.2.0.pkg](https://github.com/DexterSLamb/iGemini/releases/download/v1.2.0/iGemini-Installer-arm64-v1.2.0.pkg) |
-| **macOS（Intel）** | [iGemini-Installer-x64-v1.2.0.pkg](https://github.com/DexterSLamb/iGemini/releases/download/v1.2.0/iGemini-Installer-x64-v1.2.0.pkg) |
-| **Windows 64 位** | [iGemini-Setup-x64-v1.2.0.exe](https://github.com/DexterSLamb/iGemini/releases/download/v1.2.0/iGemini-Setup-x64-v1.2.0.exe) |
+| **macOS（Apple Silicon / M 系列）** | [在最新 Release 中下载 arm64 安装包](https://github.com/DexterSLamb/iGemini/releases/latest) |
+| **macOS（Intel）** | [在最新 Release 中下载 x64 安装包](https://github.com/DexterSLamb/iGemini/releases/latest) |
+| **Windows 64 位** | [在最新 Release 中下载 Windows x64 安装包](https://github.com/DexterSLamb/iGemini/releases/latest) |
 | **Linux（Debian / Deepin 系）** | 后端 + WebKitGTK 原生壳已完成；一键 installer 尚未做，见下方「从源码构建」 |
 
 装完会自动启动后台服务并打开 iGemini 窗口；之后**开机自启**，随时打开即用。
